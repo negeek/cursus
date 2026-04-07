@@ -1,0 +1,32 @@
+services:
+  cursus-api:
+    container_name: cursus-api
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - cursus-db
+
+  cursus-db:
+    container_name: cursus-db
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: cursus
+      POSTGRES_USER: cursus
+      POSTGRES_PASSWORD: cursus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cursus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:  
+  postgres_data:

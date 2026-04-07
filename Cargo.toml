@@ -1,0 +1,16 @@
+[package]
+edition      = "2024"
+name         = "cursus"
+publish      = false
+version      = "0.1.0"
+
+
+[workspace]
+resolver="3"
+members = [".", "api", "migration"]
+
+[dependencies]
+actix-web = "4"
+api = { path = "api" }
+migration = { path = "migration" }
+sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "with-chrono", "with-uuid", "macros", "debug-print", "mock"] }
