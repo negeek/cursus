@@ -1,4 +1,7 @@
 pub mod db;
+pub mod dto;
+pub mod handler;
+pub mod service;
 
 use actix_web::{HttpResponse, Responder, get, web};
 
@@ -8,5 +11,8 @@ async fn root() -> impl Responder {
 }
 
 pub fn init(cfg: &mut web::ServiceConfig) {
-    cfg.service(root);
+    cfg.service(root).service(
+        web::scope("/api/v1").service(web::scope("/account").service(handler::user::sign_up)), // .service(web::scope("/tasks").service(...))
+                                                                                               // .service(web::scope("/workflows").service(...))
+    );
 }

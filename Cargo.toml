@@ -13,4 +13,5 @@ members = [".", "api", "migration"]
 actix-web = "4"
 api = { path = "api" }
 migration = { path = "migration" }
-sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "with-chrono", "with-uuid", "macros", "debug-print", "mock"] }
+sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "with-chrono", "with-uuid", "macros", "debug-print", "mock", "schema-sync", "entity-registry"] }
+dotenvy = "0.15.7"

@@ -1,3 +1,5 @@
+pub mod entity;
+pub mod repository;
 pub mod connection {
     use ::std::env;
     use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};

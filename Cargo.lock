@@ -322,7 +322,12 @@ name = "api"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "bcrypt",
+ "chrono",
+ "either",
  "sea-orm",
+ "serde",
+ "uuid",
 ]
 
 [[package]]
@@ -551,6 +556,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
+name = "bcrypt"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "523ab528ce3a7ada6597f8ccf5bd8d85ebe26d5edf311cad4d1d3cfb2d357ac6"
+dependencies = [
+ "base64",
+ "blowfish",
+ "getrandom 0.4.2",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
 name = "bigdecimal"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -592,6 +610,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "blowfish"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e412e2cd0f2b2d93e02543ceae7917b3c70331573df19ee046bcbc35e45e87d7"
+dependencies = [
+ "byteorder",
+ "cipher",
 ]
 
 [[package]]
@@ -719,9 +747,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c673075a2e0e5f4a1dde27ce9dee1ea4558c7ffe648f576438a20ca1d2acc4b0"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-link",
+]
+
+[[package]]
+name = "cipher"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "773f3b9af64447d2ce9850330c473515014aa235e6a783b02db81ff39e4a3dad"
+dependencies = [
+ "crypto-common",
+ "inout",
 ]
 
 [[package]]
@@ -911,6 +951,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "api",
+ "dotenvy",
  "migration",
  "sea-orm",
 ]
@@ -1585,6 +1626,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "inout"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
+dependencies = [
+ "generic-array",
+]
+
+[[package]]
+name = "inventory"
+version = "0.3.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4f0c30c76f2f4ccee3fe55a2435f691ca00c0e4bd87abe4f4a851b1d4dac39b"
+dependencies = [
+ "rustversion",
 ]
 
 [[package]]
@@ -2552,6 +2611,7 @@ dependencies = [
  "chrono",
  "derive_more",
  "futures-util",
+ "inventory",
  "itertools",
  "log",
  "mac_address",
@@ -3507,6 +3567,7 @@ version = "1.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ac8b6f42ead25368cf5b098aeb3dc8a1a2c05a3eee8a9a1a68c640edbfc79d9"
 dependencies = [
+ "getrandom 0.4.2",
  "js-sys",
  "serde_core",
  "wasm-bindgen",

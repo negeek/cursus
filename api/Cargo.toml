@@ -6,3 +6,8 @@ edition = "2024"
 [dependencies]
 actix-web = "4"
 sea-orm = { version = "2.0.0-rc", features = [ "sqlx-postgres", "runtime-tokio-native-tls", "with-chrono", "with-uuid", "macros", "debug-print", "mock"] }
+uuid = { version = "1", features = ["v7"] }
+chrono = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+either = "1.15.0"
+bcrypt = "0.19.0"
