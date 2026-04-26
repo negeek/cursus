@@ -6,8 +6,13 @@ pub mod connection {
     use std::time::Duration;
 
     /// Connects to the database using the DATABASE_URL environment variable,
-    pub async fn connect() -> Result<DatabaseConnection, DbErr> {
-        let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be provided");
+    pub async fn connect(test: bool) -> Result<DatabaseConnection, DbErr> {
+        let db_url = if test {
+            env::var("TEST_DATABASE_URL").expect("TEST_DATABASE_URL must be provided")
+        } else {
+            env::var("DATABASE_URL").expect("DATABASE_URL must be provided")
+        };
+
         let mut opt = ConnectOptions::new(db_url);
         opt.max_connections(100)
             .min_connections(5)
@@ -16,6 +21,7 @@ pub mod connection {
             .idle_timeout(Duration::from_secs(8))
             .max_lifetime(Duration::from_secs(8))
             .sqlx_logging(false); // disable SQLx logging
+
         let db = Database::connect(opt).await?;
         return Ok(db);
     }

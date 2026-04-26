@@ -5,7 +5,7 @@ async fn main() -> std::io::Result<()> {
     println!("Starting CURSUS server...");
     dotenvy::dotenv().ok();
     println!("Connecting to database...");
-    let db = match api::db::connection::connect().await {
+    let db = match api::db::connection::connect(false).await {
         Ok(db) => {
             println!("Database connection successful!");
             db

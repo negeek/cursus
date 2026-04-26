@@ -8,6 +8,10 @@ pub enum UserServiceError {
     EmailAlreadyExists,
     HashingFailed,
     DatabaseError(DbErr),
+    InvalidCredentials,
+    InvalidVerificationCode,
+    MissingENV,
+    TokenError,
 }
 
 impl fmt::Display for UserServiceError {
@@ -16,6 +20,10 @@ impl fmt::Display for UserServiceError {
             UserServiceError::EmailAlreadyExists => write!(f, "Email already exists"),
             UserServiceError::HashingFailed => write!(f, "Password hashing failed"),
             UserServiceError::DatabaseError(e) => write!(f, "Database error: {}", e),
+            UserServiceError::InvalidCredentials => write!(f, "Invalid credentials"),
+            UserServiceError::InvalidVerificationCode => write!(f, "Invalid verification code"),
+            UserServiceError::MissingENV => write!(f, "Missing an env variable"),
+            UserServiceError::TokenError => write!(f, "Token error"),
         }
     }
 }
@@ -37,6 +45,16 @@ impl ResponseError for UserServiceError {
                 HttpResponse::InternalServerError().json(ApiError::internal_server_error())
             }
             UserServiceError::DatabaseError(_) => {
+                HttpResponse::InternalServerError().json(ApiError::internal_server_error())
+            }
+            UserServiceError::InvalidCredentials => HttpResponse::Unauthorized().json(api_error),
+            UserServiceError::InvalidVerificationCode => {
+                HttpResponse::Unauthorized().json(api_error)
+            }
+            UserServiceError::MissingENV => {
+                HttpResponse::InternalServerError().json(ApiError::internal_server_error())
+            }
+            UserServiceError::TokenError => {
                 HttpResponse::InternalServerError().json(ApiError::internal_server_error())
             }
         }

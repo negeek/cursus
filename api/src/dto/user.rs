@@ -52,11 +52,13 @@ pub struct SignInRequest {
 
 #[derive(Serialize)]
 pub struct SignInResponse {
+    pub id: String,
     pub success: bool,
 }
 
 #[derive(Deserialize)]
 pub struct VerifyEmailRequest {
+    pub id: String,
     pub code: String,
 }
 

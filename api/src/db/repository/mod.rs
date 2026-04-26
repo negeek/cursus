@@ -1,4 +1,5 @@
 pub mod user;
+pub mod user_verify;
 use sea_orm::{
     ActiveModelTrait, DatabaseConnection, DbErr, PrimaryKeyTrait,
     entity::{EntityTrait, ModelTrait},
@@ -26,12 +27,12 @@ pub trait RepositoryTrait {
     async fn find_by_uuid(
         &self,
         db: &DatabaseConnection,
-        id: uuid::Uuid,
+        id: &uuid::Uuid,
     ) -> Result<Option<Self::Model>, DbErr>
     where
         uuid::Uuid: Into<<<Self::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType>,
     {
-        Self::Entity::find_by_id(id).one(db).await
+        Self::Entity::find_by_id(*id).one(db).await
     }
 
     async fn create(
