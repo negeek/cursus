@@ -8,7 +8,10 @@ use serde_json::json;
 
 #[actix_web::test]
 async fn test_signup_success() {
-    let app = common::setup_app().await;
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
         .set_json(&json!({
@@ -20,13 +23,14 @@ async fn test_signup_success() {
 
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 200);
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
-async fn test_signup_email400() {
-    let app = common::setup_app().await;
+async fn test_signup_email_400() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
         .set_json(&json!({
@@ -38,13 +42,14 @@ async fn test_signup_email400() {
 
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 400);
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
-async fn test_signup_name400() {
-    let app = common::setup_app().await;
+async fn test_signup_name_400() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
         .set_json(&json!({
@@ -56,13 +61,14 @@ async fn test_signup_name400() {
 
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 400);
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
-async fn test_signup_password400() {
-    let app = common::setup_app().await;
+async fn test_signup_password_400() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
         .set_json(&json!({
@@ -74,41 +80,48 @@ async fn test_signup_password400() {
 
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 400);
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
 async fn test_signup_user_exist_409() {
-    let app = common::setup_app().await;
-    let req = test::TestRequest::post()
-        .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
-            "username": "testuser",
-            "email": "testuser@example.com",
-            "password": "testpassword"
-        }))
-        .to_request();
-
-    let req1 = test::TestRequest::post()
-        .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
-            "username": "testuser",
-            "email": "testuser@example.com",
-            "password": "testpassword"
-        }))
-        .to_request();
-
-    let _ = test::call_service(&app, req).await;
-    let resp = test::call_service(&app, req1).await;
-    assert_eq!(resp.status(), 409);
     let db = common::test_db().await;
-    common::teardown_db(db).await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
+    let _ = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::SIGNUP)
+            .set_json(&json!({
+                "username": "testuser",
+                "email": "testuser@example.com",
+                "password": "testpassword"
+            }))
+            .to_request(),
+    )
+    .await;
+
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::SIGNUP)
+            .set_json(&json!({
+                "username": "testuser",
+                "email": "testuser@example.com",
+                "password": "testpassword"
+            }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 409);
 }
 
 #[actix_web::test]
 async fn test_signin_invalid_creds() {
-    let app = common::setup_app().await;
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
+
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNIN)
         .set_json(&json!({
@@ -118,15 +131,14 @@ async fn test_signin_invalid_creds() {
         .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 401);
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
 async fn test_signin_success() {
-    let app = common::setup_app().await;
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
 
-    // First create a user
     let _ = test::call_service(
         &app,
         test::TestRequest::post()
@@ -153,17 +165,14 @@ async fn test_signin_success() {
     let body: serde_json::Value = test::read_body_json(resp).await;
     assert_eq!(body["success"], true);
     assert!(body["id"].is_string());
-
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
 async fn test_verify_email_success() {
-    let app = common::setup_app().await;
     let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db.clone()).await;
 
-    // Create user then signin to trigger code generation
     let _ = test::call_service(
         &app,
         test::TestRequest::post()
@@ -191,7 +200,6 @@ async fn test_verify_email_success() {
     let signin_body: serde_json::Value = test::read_body_json(signin_resp).await;
     let user_id = signin_body["id"].as_str().unwrap().to_string();
 
-    // Fetch the code via repository
     let parsed_id = uuid::Uuid::parse_str(&user_id).unwrap();
     let repo = api::db::repository::user_verify::UserVerifyRepository {};
     let verify_row = repo
@@ -215,13 +223,13 @@ async fn test_verify_email_success() {
     assert!(body["access_token"].is_string());
     assert!(body["refresh_token"].is_string());
     assert_eq!(body["email"], "testuser@example.com");
-
-    common::teardown_db(db).await;
 }
 
 #[actix_web::test]
 async fn test_verify_email_wrong_code() {
-    let app = common::setup_app().await;
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let app = common::setup_app(db).await;
 
     let _ = test::call_service(
         &app,
@@ -259,7 +267,4 @@ async fn test_verify_email_wrong_code() {
         .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), 401);
-
-    let db = common::test_db().await;
-    common::teardown_db(db).await;
 }

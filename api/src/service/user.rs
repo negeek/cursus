@@ -8,7 +8,7 @@ use crate::dto::user::{SignInRequest, SignUpRequest, VerifyEmailRequest};
 use crate::util::{gen_, token};
 use ::std::env;
 use bcrypt::{DEFAULT_COST, hash, verify};
-use sea_orm::{DatabaseConnection, Set};
+use sea_orm::{ConnectionTrait, Set};
 pub struct UserService {
     user_repository: UserRepository,
     user_verify_repository: UserVerifyRepository,
@@ -31,7 +31,7 @@ impl UserService {
     /// Returns the created user or an error.
     pub async fn sign_up(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         user_req: SignUpRequest,
     ) -> Result<UserRow, UserServiceError> {
         let existing_user = self
@@ -67,7 +67,7 @@ impl UserService {
     /// Returns success or an error.
     pub async fn sign_in(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         signin_req: SignInRequest,
     ) -> Result<UserRow, UserServiceError> {
         // Check if user exists with given email
@@ -105,7 +105,7 @@ impl UserService {
     /// Verifies the code provided
     pub async fn verify_signin_code(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         verify_req: VerifyEmailRequest,
     ) -> Result<VSigninCodeData, UserServiceError> {
         let id = uuid::Uuid::parse_str(&verify_req.id)

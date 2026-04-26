@@ -12,7 +12,7 @@ pub fn generate_random_code(length: usize) -> String {
         '2', '3', '4', '5', '6', '7', '8', '9',
     ];
     let mut random = String::new();
-    while random.chars().count() <= length {
+    while random.len() < length {
         random.push(alphanum[random_range(0..alphanum.len())]);
     }
     random

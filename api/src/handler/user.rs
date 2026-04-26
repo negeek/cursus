@@ -13,7 +13,7 @@ async fn sign_up(
 ) -> Result<impl Responder> {
     let _ = &body.validate()?;
     let user_service = UserService::new();
-    let _ = user_service.sign_up(&db, body.into_inner()).await?;
+    let _ = user_service.sign_up(&**db, body.into_inner()).await?;
     Ok(web::Json(SignUpResponse { success: true }))
 }
 
@@ -23,7 +23,7 @@ async fn signin(
     body: web::Json<SignInRequest>,
 ) -> Result<impl Responder> {
     let user_service = UserService::new();
-    let user = user_service.sign_in(&db, body.into_inner()).await?;
+    let user = user_service.sign_in(&**db, body.into_inner()).await?;
     Ok(web::Json(SignInResponse {
         id: user.id.to_string(),
         success: true,
@@ -37,7 +37,7 @@ async fn verify_email(
 ) -> Result<impl Responder> {
     let user_service = UserService::new();
     let vdata = user_service
-        .verify_signin_code(&db, body.into_inner())
+        .verify_signin_code(&**db, body.into_inner())
         .await?;
     Ok(web::Json(VerifyEmailResponse {
         id: vdata.user.id.to_string(),

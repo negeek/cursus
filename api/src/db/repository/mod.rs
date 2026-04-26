@@ -1,7 +1,7 @@
 pub mod user;
 pub mod user_verify;
 use sea_orm::{
-    ActiveModelTrait, DatabaseConnection, DbErr, PrimaryKeyTrait,
+    ActiveModelTrait, ConnectionTrait, DbErr, PrimaryKeyTrait,
     entity::{EntityTrait, ModelTrait},
 };
 
@@ -14,7 +14,7 @@ pub trait RepositoryTrait {
     /// Find a record by its primary key (i32)
     async fn find_by_i32(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         id: i32,
     ) -> Result<Option<Self::Model>, DbErr>
     where
@@ -26,7 +26,7 @@ pub trait RepositoryTrait {
     /// Find a record by its primary key (Uuid)
     async fn find_by_uuid(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         id: &uuid::Uuid,
     ) -> Result<Option<Self::Model>, DbErr>
     where
@@ -37,13 +37,17 @@ pub trait RepositoryTrait {
 
     async fn create(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         model: Self::ActiveModel,
     ) -> Result<Self::Model, DbErr>;
     async fn update(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         model: Self::ActiveModel,
     ) -> Result<Self::Model, DbErr>;
-    async fn delete(&self, db: &DatabaseConnection, model: Self::ActiveModel) -> Result<(), DbErr>;
+    async fn delete(
+        &self,
+        db: &impl ConnectionTrait,
+        model: Self::ActiveModel,
+    ) -> Result<(), DbErr>;
 }

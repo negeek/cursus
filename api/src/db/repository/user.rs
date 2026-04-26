@@ -1,6 +1,6 @@
 use crate::db::entity::user::{ActiveModel as UserOp, Entity as User, Model as UserRow};
 use crate::db::repository::RepositoryTrait;
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, DbErr};
 
 pub struct UserRepository {}
 
@@ -11,7 +11,7 @@ impl RepositoryTrait for UserRepository {
 
     async fn create(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         model: Self::ActiveModel,
     ) -> Result<Self::Model, DbErr> {
         model.insert(db).await
@@ -19,13 +19,17 @@ impl RepositoryTrait for UserRepository {
 
     async fn update(
         &self,
-        db: &DatabaseConnection,
+        db: &impl ConnectionTrait,
         model: Self::ActiveModel,
     ) -> Result<Self::Model, DbErr> {
         model.update(db).await
     }
 
-    async fn delete(&self, db: &DatabaseConnection, model: Self::ActiveModel) -> Result<(), DbErr> {
+    async fn delete(
+        &self,
+        db: &impl ConnectionTrait,
+        model: Self::ActiveModel,
+    ) -> Result<(), DbErr> {
         model.delete(db).await?;
         Ok(())
     }
@@ -34,8 +38,8 @@ impl RepositoryTrait for UserRepository {
 impl UserRepository {
     pub async fn find_by_email(
         &self,
-        db: &DatabaseConnection,
-        email: &String,
+        db: &impl ConnectionTrait,
+        email: &str,
     ) -> Result<Option<UserRow>, DbErr> {
         User::find_by_email(email).one(db).await
     }
