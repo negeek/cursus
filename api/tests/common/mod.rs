@@ -1,4 +1,5 @@
 pub mod path;
+pub mod user;
 use actix_web::{App, test, web};
 use api::init;
 use sea_orm::{ConnectionTrait, DatabaseConnection};

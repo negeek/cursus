@@ -1,6 +1,6 @@
 pub mod common;
 
-use actix_web::test;
+use actix_web::{http::header, test};
 use serde_json::json;
 
 /// Tests are sequential for now
@@ -266,5 +266,89 @@ async fn test_verify_email_wrong_code() {
         }))
         .to_request();
     let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), 401);
+}
+
+#[actix_web::test]
+async fn test_logout_success() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let app = common::setup_app(db).await;
+
+    let auth_header = (
+        header::AUTHORIZATION,
+        format!("Bearer {}", test_tokens.access),
+    );
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::LOGOUT)
+            .set_json(&json!({
+               "refresh_token": test_tokens.refresh
+            }))
+            .insert_header(auth_header)
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["success"].is_boolean())
+}
+
+#[actix_web::test]
+async fn test_logout_invalid_token() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let app = common::setup_app(db).await;
+
+    let auth_header = (
+        header::AUTHORIZATION,
+        format!("Bearer {}", test_tokens.access),
+    );
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::LOGOUT)
+            .set_json(&json!({
+               "refresh_token": "test_tokens.refresh"
+            }))
+            .insert_header(auth_header)
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 401);
+}
+
+#[actix_web::test]
+async fn test_logout_invalid_for_user() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_user = common::user::test_user(
+        &db,
+        Some("username".to_string()),
+        Some("email@gmail.com".to_string()),
+    )
+    .await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let test_tokens2 = common::user::test_tokens(&db, Some(test_user)).await;
+    let app = common::setup_app(db).await;
+
+    let auth_header = (
+        header::AUTHORIZATION,
+        format!("Bearer {}", test_tokens.access),
+    );
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::LOGOUT)
+            .set_json(&json!({
+               "refresh_token": test_tokens2.refresh
+            }))
+            .insert_header(auth_header)
+            .to_request(),
+    )
+    .await;
     assert_eq!(resp.status(), 401);
 }

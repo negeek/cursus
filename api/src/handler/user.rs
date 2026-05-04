@@ -1,7 +1,8 @@
 use crate::dto::user::{
-    RequestValidateTrait, SignInRequest, SignInResponse, SignUpRequest, SignUpResponse,
-    VerifyEmailRequest, VerifyEmailResponse,
+    LogoutRequest, LogoutResponse, RequestValidateTrait, SignInRequest, SignInResponse,
+    SignUpRequest, SignUpResponse, VerifyEmailRequest, VerifyEmailResponse,
 };
+use crate::middleware::user::AuthUser;
 use crate::service::user::UserService;
 use actix_web::{Responder, Result, post, web};
 use sea_orm::DatabaseConnection;
@@ -46,4 +47,18 @@ async fn verify_email(
         access_token: vdata.token.access,
         refresh_token: vdata.token.refresh,
     }))
+}
+
+#[post("/logout")]
+async fn logout(
+    db: web::Data<DatabaseConnection>,
+    body: web::Json<LogoutRequest>,
+    user: web::ReqData<AuthUser>,
+) -> Result<impl Responder> {
+    // Check if token is refresh type
+    let user_service = UserService::new();
+    let _ = user_service
+        .logout(&**db, body.into_inner(), user.into_inner())
+        .await?;
+    Ok(web::Json(LogoutResponse { success: true }))
 }

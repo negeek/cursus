@@ -12,6 +12,7 @@ pub enum UserServiceError {
     InvalidVerificationCode,
     MissingENV,
     TokenError,
+    InvalidToken,
 }
 
 impl fmt::Display for UserServiceError {
@@ -24,6 +25,7 @@ impl fmt::Display for UserServiceError {
             UserServiceError::InvalidVerificationCode => write!(f, "Invalid verification code"),
             UserServiceError::MissingENV => write!(f, "Missing an env variable"),
             UserServiceError::TokenError => write!(f, "Token error"),
+            UserServiceError::InvalidToken => write!(f, "Invalid Token error"),
         }
     }
 }
@@ -57,6 +59,7 @@ impl ResponseError for UserServiceError {
             UserServiceError::TokenError => {
                 HttpResponse::InternalServerError().json(ApiError::internal_server_error())
             }
+            UserServiceError::InvalidToken => HttpResponse::Unauthorized().json(api_error),
         }
     }
 }

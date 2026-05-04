@@ -1,5 +1,7 @@
+pub mod token;
 pub mod user;
 pub mod user_verify;
+
 use sea_orm::{
     ActiveModelTrait, ConnectionTrait, DbErr, PrimaryKeyTrait,
     entity::{EntityTrait, ModelTrait},

@@ -1,17 +1,21 @@
+use crate::db::entity::token::ActiveModel as BlacklistTokenOp;
 use crate::db::entity::user::{ActiveModel as UserOp, Model as UserRow};
 use crate::db::entity::user_verify::ActiveModel as UserVerifyOp;
 use crate::db::repository::RepositoryTrait;
+use crate::db::repository::token::BlacklistTokenRepository;
 use crate::db::repository::user::UserRepository;
 use crate::db::repository::user_verify::UserVerifyRepository;
 use crate::dto::error::user::UserServiceError;
-use crate::dto::user::{SignInRequest, SignUpRequest, VerifyEmailRequest};
+use crate::dto::user::{LogoutRequest, SignInRequest, SignUpRequest, VerifyEmailRequest};
+use crate::middleware::user::AuthUser;
+use crate::util::token::{TokenCodec, TokenType};
 use crate::util::{gen_, token};
-use ::std::env;
 use bcrypt::{DEFAULT_COST, hash, verify};
 use sea_orm::{ConnectionTrait, Set};
 pub struct UserService {
     user_repository: UserRepository,
     user_verify_repository: UserVerifyRepository,
+    blacklist_token_repository: BlacklistTokenRepository,
 }
 
 pub struct VSigninCodeData {
@@ -24,6 +28,7 @@ impl UserService {
         Self {
             user_repository: UserRepository {},
             user_verify_repository: UserVerifyRepository {},
+            blacklist_token_repository: BlacklistTokenRepository {},
         }
     }
     /// Signs up a new user by validating the request, checking for existing email,
@@ -119,8 +124,7 @@ impl UserService {
             return Err(UserServiceError::InvalidVerificationCode);
         }
         // Now we need to generate access and refresh tokens
-        let secret = env::var("SECRET").map_err(|_| UserServiceError::MissingENV)?;
-        let token_codec = token::TokenCodec::new(secret, verify_req.id);
+        let token_codec = token::TokenCodec::new(verify_req.id);
         let token = token_codec
             .generate()
             .map_err(|_| UserServiceError::TokenError)?;
@@ -129,5 +133,55 @@ impl UserService {
             user: user.unwrap(),
             token: token,
         })
+    }
+
+    /// Verifies the Refresh token is valid
+    /// Sets both Refresh and Access tokens as blacklisted
+    pub async fn logout(
+        &self,
+        db: &impl ConnectionTrait,
+        logout_req: LogoutRequest,
+        user: AuthUser,
+    ) -> Result<(), UserServiceError> {
+        //
+        let refresh_claims = match TokenCodec::validate(&logout_req.refresh_token) {
+            Ok(c) => c,
+            Err(_) => {
+                return Err(UserServiceError::InvalidToken);
+            }
+        };
+        if refresh_claims.sub != user.id || refresh_claims.ttype != TokenType::Refresh.to_string() {
+            return Err(UserServiceError::InvalidToken);
+        }
+        let access_token_data = BlacklistTokenOp {
+            id: Default::default(),
+            jti: Set(user.access_token_jti),
+            token_type: Set(TokenType::Access.to_string()),
+            expires_at: Set(
+                chrono::DateTime::from_timestamp_secs(user.access_token_exp as i64)
+                    .unwrap_or(chrono::Utc::now()),
+            ),
+            ..Default::default()
+        };
+        let refresh_token_data = BlacklistTokenOp {
+            id: Default::default(),
+            jti: Set(refresh_claims.jti),
+            token_type: Set(TokenType::Refresh.to_string()),
+            expires_at: Set(
+                chrono::DateTime::from_timestamp_secs(refresh_claims.exp as i64)
+                    .unwrap_or(chrono::Utc::now()),
+            ),
+            ..Default::default()
+        };
+        let _ = self
+            .blacklist_token_repository
+            .create(db, access_token_data)
+            .await?;
+        let _ = self
+            .blacklist_token_repository
+            .create(db, refresh_token_data)
+            .await?;
+
+        Ok(())
     }
 }

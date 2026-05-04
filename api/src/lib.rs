@@ -1,6 +1,7 @@
 pub mod db;
 pub mod dto;
 pub mod handler;
+pub mod middleware;
 pub mod service;
 pub mod util;
 
@@ -17,7 +18,12 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             web::scope("/account")
                 .service(handler::user::sign_up)
                 .service(handler::user::signin)
-                .service(handler::user::verify_email),
+                .service(handler::user::verify_email)
+                .service(
+                    web::scope("")
+                        .wrap(middleware::user::Auth)
+                        .service(handler::user::logout),
+                ),
         ),
     );
 }
