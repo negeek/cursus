@@ -1,6 +1,7 @@
 use crate::dto::user::{
-    LogoutRequest, LogoutResponse, RequestValidateTrait, SignInRequest, SignInResponse,
-    SignUpRequest, SignUpResponse, VerifyEmailRequest, VerifyEmailResponse,
+    LogoutRequest, LogoutResponse, RefreshAccessResponse, RefressAccessRequest,
+    RequestValidateTrait, SignInRequest, SignInResponse, SignUpRequest, SignUpResponse,
+    VerifyEmailRequest, VerifyEmailResponse,
 };
 use crate::middleware::user::AuthUser;
 use crate::service::user::UserService;
@@ -49,8 +50,7 @@ async fn verify_email(
     }))
 }
 
-#[post("/logout")]
-async fn logout(
+pub async fn logout(
     db: web::Data<DatabaseConnection>,
     body: web::Json<LogoutRequest>,
     user: web::ReqData<AuthUser>,
@@ -61,4 +61,18 @@ async fn logout(
         .logout(&**db, body.into_inner(), user.into_inner())
         .await?;
     Ok(web::Json(LogoutResponse { success: true }))
+}
+
+#[post("/refresh_access")]
+async fn refresh_access_token(
+    db: web::Data<DatabaseConnection>,
+    body: web::Json<RefressAccessRequest>,
+) -> Result<impl Responder> {
+    let user_service = UserService::new();
+    let access_token = user_service
+        .refresh_access_token(&**db, &body.refresh_token)
+        .await?;
+    Ok(web::Json(RefreshAccessResponse {
+        access_token: access_token,
+    }))
 }

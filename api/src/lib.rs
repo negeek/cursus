@@ -20,10 +20,11 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                 .service(handler::user::signin)
                 .service(handler::user::verify_email)
                 .service(
-                    web::scope("")
+                    web::resource("/logout")
                         .wrap(middleware::user::Auth)
-                        .service(handler::user::logout),
-                ),
+                        .route(web::post().to(handler::user::logout)),
+                )
+                .service(handler::user::refresh_access_token),
         ),
     );
 }

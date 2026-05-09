@@ -71,37 +71,33 @@ impl TokenCodec {
         String::from("cursus_user")
     }
 
+    pub fn generate_token(&self, ttype: TokenType) -> Result<String, Error> {
+        let expiry = match ttype {
+            TokenType::Access => self.access_expiry,
+            TokenType::Refresh => self.refresh_expiry,
+        };
+        let claims = Claims {
+            aud: self.audience.clone(),
+            exp: expiry,
+            iat: self.issue_at,
+            iss: self.issuer.clone(),
+            sub: self.subject.clone(),
+            jti: uuid::Uuid::new_v4().to_string(),
+            ttype: ttype.to_string(),
+        };
+        let token: String = encode(
+            &Header::new(self.alg),
+            &claims,
+            &EncodingKey::from_secret(self.secret.as_ref()),
+        )?;
+        return Ok(token);
+    }
+
     /// Generates access and refresh token
     /// ensure to use the new() method before calling it
     pub fn generate(&self) -> Result<Token, Error> {
-        let access_claims = Claims {
-            aud: self.audience.clone(),
-            exp: self.access_expiry,
-            iat: self.issue_at,
-            iss: self.issuer.clone(),
-            sub: self.subject.clone(),
-            jti: uuid::Uuid::new_v4().to_string(),
-            ttype: TokenType::Access.to_string(),
-        };
-        let refresh_claims = Claims {
-            aud: self.audience.clone(),
-            exp: self.refresh_expiry,
-            iat: self.issue_at,
-            iss: self.issuer.clone(),
-            sub: self.subject.clone(),
-            jti: uuid::Uuid::new_v4().to_string(),
-            ttype: TokenType::Refresh.to_string(),
-        };
-        let access_token: String = encode(
-            &Header::new(self.alg),
-            &access_claims,
-            &EncodingKey::from_secret(self.secret.as_ref()),
-        )?;
-        let refresh_token: String = encode(
-            &Header::new(self.alg),
-            &refresh_claims,
-            &EncodingKey::from_secret(self.secret.as_ref()),
-        )?;
+        let access_token = self.generate_token(TokenType::Access)?;
+        let refresh_token = self.generate_token(TokenType::Refresh)?;
         return Ok(Token {
             access: access_token,
             refresh: refresh_token,

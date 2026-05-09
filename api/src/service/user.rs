@@ -184,4 +184,35 @@ impl UserService {
 
         Ok(())
     }
+
+    /// Generates new access token using refresh token validity
+    pub async fn refresh_access_token(
+        &self,
+        db: &impl ConnectionTrait,
+        refresh_token: &String,
+    ) -> Result<String, UserServiceError> {
+        let refresh_claims = match TokenCodec::validate(refresh_token) {
+            Ok(c) => c,
+            Err(_) => {
+                return Err(UserServiceError::BadToken);
+            }
+        };
+        if refresh_claims.ttype != TokenType::Refresh.to_string() {
+            return Err(UserServiceError::BadToken);
+        }
+        let is_blacklisted = self
+            .blacklist_token_repository
+            .jti_exists(db, &refresh_claims.jti)
+            .await
+            .map_err(|e| UserServiceError::DatabaseError(e))?;
+        if is_blacklisted {
+            return Err(UserServiceError::BadToken);
+        }
+        let token_codec = token::TokenCodec::new(refresh_claims.sub);
+        let access_token = token_codec
+            .generate_token(TokenType::Access)
+            .map_err(|_| UserServiceError::TokenError)?;
+
+        return Ok(access_token);
+    }
 }

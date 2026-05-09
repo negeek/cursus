@@ -13,6 +13,7 @@ pub enum UserServiceError {
     MissingENV,
     TokenError,
     InvalidToken,
+    BadToken,
 }
 
 impl fmt::Display for UserServiceError {
@@ -26,6 +27,7 @@ impl fmt::Display for UserServiceError {
             UserServiceError::MissingENV => write!(f, "Missing an env variable"),
             UserServiceError::TokenError => write!(f, "Token error"),
             UserServiceError::InvalidToken => write!(f, "Invalid Token error"),
+            UserServiceError::BadToken => write!(f, "Bad Token error"),
         }
     }
 }
@@ -60,6 +62,7 @@ impl ResponseError for UserServiceError {
                 HttpResponse::InternalServerError().json(ApiError::internal_server_error())
             }
             UserServiceError::InvalidToken => HttpResponse::Unauthorized().json(api_error),
+            UserServiceError::BadToken => HttpResponse::BadRequest().json(api_error),
         }
     }
 }

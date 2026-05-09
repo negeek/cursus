@@ -80,3 +80,13 @@ pub struct LogoutRequest {
 pub struct LogoutResponse {
     pub success: bool,
 }
+
+#[derive(Deserialize)]
+pub struct RefressAccessRequest {
+    pub refresh_token: String,
+}
+
+#[derive(Serialize)]
+pub struct RefreshAccessResponse {
+    pub access_token: String,
+}

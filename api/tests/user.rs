@@ -352,3 +352,63 @@ async fn test_logout_invalid_for_user() {
     .await;
     assert_eq!(resp.status(), 401);
 }
+
+#[actix_web::test]
+async fn test_refresh_access_success() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let app = common::setup_app(db).await;
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::REFRESH_ACCESS)
+            .set_json(&json!({
+               "refresh_token": test_tokens.refresh
+            }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = test::read_body_json(resp).await;
+    assert!(body["access_token"].is_string());
+}
+
+#[actix_web::test]
+async fn test_refresh_access_400() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let app = common::setup_app(db).await;
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::REFRESH_ACCESS)
+            .set_json(&json!({
+               "refresh_token": test_tokens.access
+            }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 400);
+}
+
+#[actix_web::test]
+async fn test_refresh_access_balcklisted_400() {
+    let db = common::test_db().await;
+    common::truncate_db(&db).await;
+    let test_tokens = common::user::test_tokens(&db, None).await;
+    let _ = common::user::test_blacklisted(&db, test_tokens.refresh.clone()).await;
+    let app = common::setup_app(db).await;
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri(common::path::Paths::REFRESH_ACCESS)
+            .set_json(&json!({
+               "refresh_token": test_tokens.refresh
+            }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 400);
+}
