@@ -5,13 +5,13 @@ use uuid::{NoContext, Timestamp, Uuid as uUuid};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "task_states")]
+#[sea_orm(table_name = "workflow_task_states")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
-    pub task_id: Uuid,
-    #[sea_orm(belongs_to, from = "task_id", to = "id")]
-    pub task: HasOne<task::Entity>,
+    pub workflow_task_id: Uuid,
+    #[sea_orm(belongs_to, from = "workflow_task_id", to = "id")]
+    pub workflow_task: HasOne<task::Entity>,
     pub workflow_state_id: Uuid,
     #[sea_orm(belongs_to, from = "workflow_state_id", to = "id")]
     pub workflow_state: HasOne<workflow_state::Entity>,

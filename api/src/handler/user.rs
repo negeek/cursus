@@ -1,7 +1,7 @@
+use crate::dto::RequestValidateTrait;
 use crate::dto::user::{
-    LogoutRequest, LogoutResponse, RefreshAccessResponse, RefressAccessRequest,
-    RequestValidateTrait, SignInRequest, SignInResponse, SignUpRequest, SignUpResponse,
-    VerifyEmailRequest, VerifyEmailResponse,
+    LogoutRequest, LogoutResponse, RefreshAccessResponse, RefressAccessRequest, SignInRequest,
+    SignInResponse, SignUpRequest, SignUpResponse, VerifyEmailRequest, VerifyEmailResponse,
 };
 use crate::middleware::user::AuthUser;
 use crate::service::user::UserService;

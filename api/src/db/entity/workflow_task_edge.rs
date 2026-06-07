@@ -1,30 +1,31 @@
-use crate::db::entity::{task, workflow};
+use crate::db::entity::{workflow, workflow_task};
 use async_trait::async_trait;
 use sea_orm::{Set, entity::prelude::*};
 use uuid::{NoContext, Timestamp, Uuid as uUuid};
 
 #[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "workflow_tasks")]
+#[sea_orm(table_name = "workflow_task_edges")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
-    #[sea_orm(unique_key = "unique_workflow_task")]
+    #[sea_orm(unique_key = "unique_workflow_edge")]
     pub workflow_id: Uuid,
     #[sea_orm(belongs_to, from = "workflow_id", to = "id")]
     pub workflow: HasOne<workflow::Entity>,
-    pub task_id: Uuid,
-    #[sea_orm(belongs_to, from = "task_id", to = "id")]
-    pub task: HasOne<task::Entity>,
-    #[sea_orm(unique_key = "unique_workflow_task")]
-    pub step_name: String, // unique name for the step in the workflow, used for identification
-    pub task_body: Option<Json>, // override task body for this workflow, if null, use the one defined in task
-    pub task_result_schema: Option<Json>, // override task result schema for this workflow, if null, use the one defined in task
-    pub run_position: i32,                // position of the task in the workflow run order
-    #[sea_orm(nullable)]
-    pub retry_count: Option<i32>,
-    #[sea_orm(nullable)]
-    pub retry_delay_secs: Option<i32>,
+    #[sea_orm(unique_key = "unique_workflow_edge")]
+    pub from_task_id: Uuid,
+    #[sea_orm(
+        belongs_to,
+        relation_enum = "from_task",
+        from = "from_task_id",
+        to = "id"
+    )]
+    pub from_task: HasOne<workflow_task::Entity>,
+    #[sea_orm(unique_key = "unique_workflow_edge")]
+    pub to_task_id: Uuid,
+    #[sea_orm(belongs_to, relation_enum = "to_task", from = "to_task_id", to = "id")]
+    pub to_task: HasOne<workflow_task::Entity>,
     pub date_created: DateTimeUtc,
     pub date_updated: DateTimeUtc,
 }

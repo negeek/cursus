@@ -1,9 +1,6 @@
+use crate::dto::RequestValidateTrait;
 use crate::dto::error::ValidationError;
 use serde::{Deserialize, Serialize};
-
-pub trait RequestValidateTrait {
-    fn validate(&self) -> Result<(), ValidationError>;
-}
 
 #[derive(Deserialize)]
 pub struct SignUpRequest {

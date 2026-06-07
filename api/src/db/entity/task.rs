@@ -12,13 +12,13 @@ pub struct Model {
     pub user_id: Uuid,
     #[sea_orm(belongs_to, from = "user_id", to = "id")]
     pub user: HasOne<user::Entity>,
-    pub user_title: String, // user defined title for the task
-    #[sea_orm(unique)]
-    pub title: String, // system generated unique title for the task, used for identification
+    pub name: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
     pub endpoint: String,
-    pub method: String,
+    #[sea_orm(default_value = "POST")]
+    pub method: String, // it should always be POST actually
+    pub result_schema: Option<Json>, // JSON schema to validate the task result, if null, any result is accepted
     #[sea_orm(nullable)]
     pub body: Option<Json>,
     pub date_created: DateTimeUtc,

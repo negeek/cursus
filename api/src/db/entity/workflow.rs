@@ -12,9 +12,7 @@ pub struct Model {
     pub user_id: Uuid,
     #[sea_orm(belongs_to, from = "user_id", to = "id")]
     pub user: HasOne<user::Entity>,
-    pub user_title: String, // user defined title for the workflow
-    #[sea_orm(unique)]
-    pub title: String, // system generated unique title for the workflow, used for identification
+    pub name: String, // user defined title for the workflow
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
     pub run_type: String, // "manual" or "scheduled" or "cron"
@@ -40,6 +38,7 @@ impl ActiveModelBehavior for ActiveModel {
             self.id = Set(uUuid::new_v7(Timestamp::now(NoContext)));
             self.date_created = Set(chrono::Utc::now());
             self.date_updated = Set(chrono::Utc::now());
+            self.is_active = Set(true);
         }
         self.date_updated = Set(chrono::Utc::now());
         Ok(self)
