@@ -1,6 +1,9 @@
 pub mod path;
 pub mod task;
 pub mod user;
+pub mod worflow_task_edge;
+pub mod workflow;
+pub mod workflow_task;
 use actix_web::{App, test, web};
 use api::init;
 use sea_orm::{ConnectionTrait, DatabaseConnection};

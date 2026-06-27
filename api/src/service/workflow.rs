@@ -1,6 +1,6 @@
 use sea_orm::{ConnectionTrait, Set};
 
-use crate::db::entity::workflow::{self, ActiveModel as WorkflowOp, Model as WorkflowRow};
+use crate::db::entity::workflow::{ActiveModel as WorkflowOp, Model as WorkflowRow};
 use crate::db::repository::RepositoryTrait;
 use crate::db::repository::workflow::WorkflowRepository;
 use crate::dto::error::workflow::WorkflowServiceError;

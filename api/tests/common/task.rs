@@ -9,7 +9,25 @@ pub async fn test_task(db: &DatabaseConnection, user_id: String) -> TaskRow {
         user_id: Set(uuid::Uuid::parse_str(&user_id).unwrap()),
         name: Set(String::from("Test Task")),
         description: Set(Some(String::from("This is a test task."))),
-        endpoint: Set(String::from("/test/endpoint")),
+        endpoint: Set(String::from("http://example.com/test-endpoint")),
+        result_schema: Set(Some(serde_json::json!({"result": {"status": "string"}}))),
+        body: Set(Some(serde_json::json!({"input": "string"}))),
+        ..Default::default()
+    };
+    let task_res = TaskRepository {}.create(db, task_data).await;
+    match task_res {
+        Ok(t) => return t,
+        Err(e) => panic!("Error: {}", e),
+    };
+}
+
+pub async fn test_task_dyn(db: &DatabaseConnection, user_id: String, name: String) -> TaskRow {
+    let task_data = TaskOp {
+        id: Default::default(),
+        user_id: Set(uuid::Uuid::parse_str(&user_id).unwrap()),
+        name: Set(name),
+        description: Set(Some(String::from("This is a test task."))),
+        endpoint: Set(String::from("http://example.com/test-endpoint")),
         result_schema: Set(Some(serde_json::json!({"result": {"status": "string"}}))),
         body: Set(Some(serde_json::json!({"input": "string"}))),
         ..Default::default()

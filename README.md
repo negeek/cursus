@@ -1,5 +1,7 @@
 # Cursus
 
+> **Work in progress — not yet usable.**
+
 > *Cursus Honorum* — the Roman sequential path of offices climbed in strict order. No skipping. No shortcuts. Every step unlocks the next.
 
 Cursus is a DAG-based workflow orchestration service. You define tasks, declare dependencies between them, and register an HTTP endpoint per task. When all of a task's dependencies complete, Cursus automatically calls that task's endpoint — triggering execution on your own infrastructure.
