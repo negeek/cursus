@@ -61,7 +61,7 @@ impl WorkflowTaskService {
             .find_by_step_name(db, &workflow_id, &workflow_task_req.step_name)
             .await?
         {
-            Some(_) => return Err(WorkflowTaskServiceError::ServiceError), // Step name already exists
+            Some(_) => return Err(WorkflowTaskServiceError::DuplicateStepName),
             None => (),
         };
         // Create workflow task

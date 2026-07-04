@@ -41,6 +41,10 @@ impl fmt::Display for AuthError {
 }
 
 impl ResponseError for AuthError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::UNAUTHORIZED
+    }
+
     fn error_response(&self) -> HttpResponse {
         let api_error = ApiError {
             error: self.to_string(),

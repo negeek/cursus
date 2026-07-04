@@ -45,7 +45,7 @@ async fn test_create_task_success() {
             .to_request(),
     )
     .await;
-    assert_eq!(resp.status(), 200);
+    assert_eq!(resp.status(), 201);
     let body: serde_json::Value = test::read_body_json(resp).await;
     assert!(body.get("id").is_some());
 }
@@ -191,44 +191,66 @@ async fn test_task_endpoints_unauthenticated() {
 
     let task_url = common::path::Paths::GET_EDIT_DELETE_TASK.replace("{task_id}", NONEXISTENT_ID);
 
-    let list = test::call_service(
-        &app,
-        test::TestRequest::get()
-            .uri(common::path::Paths::CREATE_LIST_TASK)
-            .to_request(),
-    )
-    .await;
-    assert_eq!(list.status(), 401);
+    let unauth_status = |r: Result<_, actix_web::Error>| {
+        r.map(|resp: actix_web::dev::ServiceResponse| resp.status())
+            .unwrap_or_else(|e| e.as_response_error().status_code())
+    };
 
-    let create = test::call_service(
-        &app,
-        test::TestRequest::post()
-            .uri(common::path::Paths::CREATE_LIST_TASK)
-            .set_json(&json!({"name": "t", "endpoint": "https://x.com"}))
-            .to_request(),
-    )
-    .await;
-    assert_eq!(create.status(), 401);
-
-    let get = test::call_service(&app, test::TestRequest::get().uri(&task_url).to_request()).await;
-    assert_eq!(get.status(), 401);
-
-    let edit = test::call_service(
-        &app,
-        test::TestRequest::patch()
-            .uri(&task_url)
-            .set_json(&json!({}))
-            .to_request(),
-    )
-    .await;
-    assert_eq!(edit.status(), 401);
-
-    let delete = test::call_service(
-        &app,
-        test::TestRequest::delete().uri(&task_url).to_request(),
-    )
-    .await;
-    assert_eq!(delete.status(), 401);
+    assert_eq!(
+        unauth_status(
+            test::try_call_service(
+                &app,
+                test::TestRequest::get()
+                    .uri(common::path::Paths::CREATE_LIST_TASK)
+                    .to_request()
+            )
+            .await
+        ),
+        401
+    );
+    assert_eq!(
+        unauth_status(
+            test::try_call_service(
+                &app,
+                test::TestRequest::post()
+                    .uri(common::path::Paths::CREATE_LIST_TASK)
+                    .set_json(&json!({"name": "t", "endpoint": "https://x.com"}))
+                    .to_request()
+            )
+            .await
+        ),
+        401
+    );
+    assert_eq!(
+        unauth_status(
+            test::try_call_service(&app, test::TestRequest::get().uri(&task_url).to_request())
+                .await
+        ),
+        401
+    );
+    assert_eq!(
+        unauth_status(
+            test::try_call_service(
+                &app,
+                test::TestRequest::patch()
+                    .uri(&task_url)
+                    .set_json(&json!({}))
+                    .to_request()
+            )
+            .await
+        ),
+        401
+    );
+    assert_eq!(
+        unauth_status(
+            test::try_call_service(
+                &app,
+                test::TestRequest::delete().uri(&task_url).to_request()
+            )
+            .await
+        ),
+        401
+    );
 }
 
 #[actix_web::test]

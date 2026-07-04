@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
+use sea_orm::{ConnectionTrait, Set};
 
 use crate::db::entity::workflow_task_edge::{
     ActiveModel as WorkflowTaskEdgeOp, Model as WorkflowTaskEdgeRow,
