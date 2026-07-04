@@ -1,11 +1,23 @@
+use crate::dto::error::ApiError;
 use crate::dto::workflow::{
-    CreateWorkflowRequest, DeleteWorkflowResponse, EditWorkflowRequest, WorkflowResponse,
+    CreateWorkflowRequest, DeleteWorkflowResponse, EditWorkflowRequest, WorkflowDetailResponse,
+    WorkflowResponse,
 };
 use crate::middleware::user::AuthUser;
 use crate::{dto::RequestValidateTrait, service::workflow::WorkflowService};
 use actix_web::{Responder, Result, delete, get, http::StatusCode, patch, post, web};
 use sea_orm::DatabaseConnection;
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflows",
+    responses(
+        (status = 200, description = "List of workflows", body = Vec<WorkflowResponse>),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[get("/workflows")]
 async fn get_workflows(
     db: web::Data<DatabaseConnection>,
@@ -20,6 +32,18 @@ async fn get_workflows(
     Ok(web::Json(response))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/workflows",
+    request_body = CreateWorkflowRequest,
+    responses(
+        (status = 201, description = "Workflow created", body = WorkflowResponse),
+        (status = 400, description = "Validation error", body = ApiError),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[post("/workflows")]
 async fn create_workflow(
     db: web::Data<DatabaseConnection>,
@@ -37,6 +61,19 @@ async fn create_workflow(
     ))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflows/{workflow_id}",
+    params(("workflow_id" = String, Path, description = "Workflow UUID")),
+    responses(
+        (status = 200, description = "Workflow found", body = WorkflowResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[get("/workflows/{workflow_id}")]
 async fn get_workflow(
     db: web::Data<DatabaseConnection>,
@@ -51,6 +88,19 @@ async fn get_workflow(
     Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflows/{workflow_id}/detail",
+    params(("workflow_id" = String, Path, description = "Workflow UUID")),
+    responses(
+        (status = 200, description = "Workflow with tasks and edges", body = WorkflowDetailResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[get("/workflows/{workflow_id}/detail")]
 async fn get_workflow_detail(
     db: web::Data<DatabaseConnection>,
@@ -65,6 +115,21 @@ async fn get_workflow_detail(
     Ok(web::Json(detail))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/workflows/{workflow_id}",
+    params(("workflow_id" = String, Path, description = "Workflow UUID")),
+    request_body = EditWorkflowRequest,
+    responses(
+        (status = 200, description = "Workflow updated", body = WorkflowResponse),
+        (status = 400, description = "Validation error", body = ApiError),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[patch("/workflows/{workflow_id}")]
 async fn edit_workflow(
     db: web::Data<DatabaseConnection>,
@@ -81,6 +146,19 @@ async fn edit_workflow(
     Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/workflows/{workflow_id}",
+    params(("workflow_id" = String, Path, description = "Workflow UUID")),
+    responses(
+        (status = 200, description = "Workflow deleted", body = DeleteWorkflowResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflows"
+)]
 #[delete("/workflows/{workflow_id}")]
 async fn delete_workflow(
     db: web::Data<DatabaseConnection>,

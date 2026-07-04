@@ -1,3 +1,4 @@
+use crate::dto::error::ApiError;
 use crate::dto::workflow_task::{
     CreateWorkflowTaskRequest, DeleteWorkflowTaskResponse, EditWorkflowTaskRequest,
     WorkflowTaskResponse,
@@ -7,6 +8,22 @@ use crate::{dto::RequestValidateTrait, service::workflow_task::WorkflowTaskServi
 use actix_web::{Responder, Result, delete, get, http::StatusCode, patch, post, web};
 use sea_orm::DatabaseConnection;
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/workflows/{workflow_id}/tasks",
+    params(("workflow_id" = String, Path, description = "Workflow UUID")),
+    request_body = CreateWorkflowTaskRequest,
+    responses(
+        (status = 201, description = "Workflow task created", body = WorkflowTaskResponse),
+        (status = 400, description = "Validation error", body = ApiError),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow or task", body = ApiError),
+        (status = 404, description = "Workflow or task not found", body = ApiError),
+        (status = 409, description = "Step name already exists", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflow Tasks"
+)]
 #[post("/workflows/{workflow_id}/tasks")]
 async fn create_workflow_task(
     db: web::Data<DatabaseConnection>,
@@ -26,6 +43,22 @@ async fn create_workflow_task(
     ))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflows/{workflow_id}/tasks/{workflow_task_id}",
+    params(
+        ("workflow_id" = String, Path, description = "Workflow UUID"),
+        ("workflow_task_id" = String, Path, description = "Workflow task UUID"),
+    ),
+    responses(
+        (status = 200, description = "Workflow task found", body = WorkflowTaskResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow task not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflow Tasks"
+)]
 #[get("/workflows/{workflow_id}/tasks/{workflow_task_id}")]
 async fn get_workflow_task(
     db: web::Data<DatabaseConnection>,
@@ -42,6 +75,24 @@ async fn get_workflow_task(
     )))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/api/v1/workflows/{workflow_id}/tasks/{workflow_task_id}",
+    params(
+        ("workflow_id" = String, Path, description = "Workflow UUID"),
+        ("workflow_task_id" = String, Path, description = "Workflow task UUID"),
+    ),
+    request_body = EditWorkflowTaskRequest,
+    responses(
+        (status = 200, description = "Workflow task updated", body = WorkflowTaskResponse),
+        (status = 400, description = "Validation error", body = ApiError),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow task not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflow Tasks"
+)]
 #[patch("/workflows/{workflow_id}/tasks/{workflow_task_id}")]
 async fn edit_workflow_task(
     db: web::Data<DatabaseConnection>,
@@ -66,6 +117,22 @@ async fn edit_workflow_task(
     )))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/workflows/{workflow_id}/tasks/{workflow_task_id}",
+    params(
+        ("workflow_id" = String, Path, description = "Workflow UUID"),
+        ("workflow_task_id" = String, Path, description = "Workflow task UUID"),
+    ),
+    responses(
+        (status = 200, description = "Workflow task deleted", body = DeleteWorkflowTaskResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+        (status = 403, description = "Not your workflow", body = ApiError),
+        (status = 404, description = "Workflow task not found", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Workflow Tasks"
+)]
 #[delete("/workflows/{workflow_id}/tasks/{workflow_task_id}")]
 async fn delete_workflow_task(
     db: web::Data<DatabaseConnection>,

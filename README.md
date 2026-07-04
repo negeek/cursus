@@ -19,6 +19,13 @@ You bring the tasks. Cursus decides when they run.
 make run
 ```
 
-The API will be available at `http://localhost:8080`.
-
 Copy `.env.example` to `.env` and update the values before starting.
+
+## API Documentation
+
+Once the server is running, the interactive API docs are available at:
+
+| URL | Description |
+|-----|-------------|
+| `http://localhost:8080/docs/` | Swagger UI — browse and try endpoints |
+| `http://localhost:8080/api-docs/openapi.json` | Raw OpenAPI spec |

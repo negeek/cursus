@@ -1,4 +1,5 @@
 use crate::dto::RequestValidateTrait;
+use crate::dto::error::ApiError;
 use crate::dto::user::{
     LogoutRequest, LogoutResponse, RefreshAccessResponse, RefressAccessRequest, SignInRequest,
     SignInResponse, SignUpRequest, SignUpResponse, VerifyEmailRequest, VerifyEmailResponse,
@@ -8,6 +9,17 @@ use crate::service::user::UserService;
 use actix_web::{Responder, Result, post, web};
 use sea_orm::DatabaseConnection;
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/account/signup",
+    request_body = SignUpRequest,
+    responses(
+        (status = 200, description = "Account created", body = SignUpResponse),
+        (status = 400, description = "Validation error", body = ApiError),
+        (status = 409, description = "Email already exists", body = ApiError),
+    ),
+    tag = "Auth"
+)]
 #[post("/signup")]
 async fn sign_up(
     db: web::Data<DatabaseConnection>,
@@ -19,6 +31,16 @@ async fn sign_up(
     Ok(web::Json(SignUpResponse { success: true }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/account/signin",
+    request_body = SignInRequest,
+    responses(
+        (status = 200, description = "Credentials accepted, OTP sent", body = SignInResponse),
+        (status = 401, description = "Invalid credentials", body = ApiError),
+    ),
+    tag = "Auth"
+)]
 #[post("/signin")]
 async fn signin(
     db: web::Data<DatabaseConnection>,
@@ -32,6 +54,16 @@ async fn signin(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/account/verify_email",
+    request_body = VerifyEmailRequest,
+    responses(
+        (status = 200, description = "OTP verified, tokens issued", body = VerifyEmailResponse),
+        (status = 401, description = "Invalid or expired code", body = ApiError),
+    ),
+    tag = "Auth"
+)]
 #[post("/verify_email")]
 async fn verify_email(
     db: web::Data<DatabaseConnection>,
@@ -50,12 +82,22 @@ async fn verify_email(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/account/logout",
+    request_body = LogoutRequest,
+    responses(
+        (status = 200, description = "Logged out", body = LogoutResponse),
+        (status = 401, description = "Unauthenticated", body = ApiError),
+    ),
+    security(("bearer_auth" = [])),
+    tag = "Auth"
+)]
 pub async fn logout(
     db: web::Data<DatabaseConnection>,
     body: web::Json<LogoutRequest>,
     user: web::ReqData<AuthUser>,
 ) -> Result<impl Responder> {
-    // Check if token is refresh type
     let user_service = UserService::new();
     let _ = user_service
         .logout(&**db, body.into_inner(), user.into_inner())
@@ -63,6 +105,16 @@ pub async fn logout(
     Ok(web::Json(LogoutResponse { success: true }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/account/refresh_access",
+    request_body = RefressAccessRequest,
+    responses(
+        (status = 200, description = "New access token issued", body = RefreshAccessResponse),
+        (status = 400, description = "Invalid refresh token", body = ApiError),
+    ),
+    tag = "Auth"
+)]
 #[post("/refresh_access")]
 async fn refresh_access_token(
     db: web::Data<DatabaseConnection>,

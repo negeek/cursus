@@ -9,6 +9,7 @@ use crate::dto::workflow_task::WorkflowTaskResponse;
 use crate::dto::workflow_task_edge::WorkflowTaskEdgeResponse;
 use cron::Schedule;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 pub enum WorkflowRunType {
     Manual,
@@ -35,7 +36,7 @@ impl WorkflowRunType {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateWorkflowRequest {
     pub name: String,
     pub description: Option<String>,
@@ -88,7 +89,7 @@ impl RequestValidateTrait for CreateWorkflowRequest {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct EditWorkflowRequest {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -147,7 +148,7 @@ impl RequestValidateTrait for EditWorkflowRequest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct WorkflowDetailResponse {
     pub id: String,
     pub name: String,
@@ -192,7 +193,7 @@ impl WorkflowDetailResponse {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct WorkflowResponse {
     pub id: String,
     pub name: String,
@@ -205,7 +206,7 @@ pub struct WorkflowResponse {
     pub date_updated: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct DeleteWorkflowResponse {
     pub message: String,
 }

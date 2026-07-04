@@ -4,8 +4,9 @@ use crate::dto::error::ValidationError;
 use crate::dto::task::{TaskBody, TaskResultSchema};
 use crate::util::type_conv::value_to_json;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateWorkflowTaskRequest {
     pub task_id: String,
     pub step_name: String,
@@ -38,7 +39,7 @@ impl RequestValidateTrait for CreateWorkflowTaskRequest {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct EditWorkflowTaskRequest {
     pub step_name: Option<String>,
     pub task_body: Option<TaskBody>,
@@ -62,7 +63,7 @@ impl RequestValidateTrait for EditWorkflowTaskRequest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct WorkflowTaskResponse {
     pub id: String,
     pub task_id: String,
@@ -93,7 +94,7 @@ impl WorkflowTaskResponse {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct DeleteWorkflowTaskResponse {
     pub message: String,
 }

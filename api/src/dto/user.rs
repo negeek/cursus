@@ -1,8 +1,9 @@
 use crate::dto::RequestValidateTrait;
 use crate::dto::error::ValidationError;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct SignUpRequest {
     pub username: String,
     pub email: String,
@@ -36,30 +37,30 @@ impl RequestValidateTrait for SignUpRequest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct SignUpResponse {
     pub success: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct SignInRequest {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct SignInResponse {
     pub id: String,
     pub success: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct VerifyEmailRequest {
     pub id: String,
     pub code: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct VerifyEmailResponse {
     pub id: String,
     pub username: String,
@@ -68,22 +69,22 @@ pub struct VerifyEmailResponse {
     pub refresh_token: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LogoutRequest {
     pub refresh_token: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct LogoutResponse {
     pub success: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct RefressAccessRequest {
     pub refresh_token: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct RefreshAccessResponse {
     pub access_token: String,
 }

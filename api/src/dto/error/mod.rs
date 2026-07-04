@@ -7,8 +7,9 @@ use core::fmt;
 
 use actix_web::ResponseError;
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct ApiError {
     pub error: String,
 }

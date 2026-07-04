@@ -2,8 +2,9 @@ use crate::db::entity::workflow_task_edge::Model as WorkflowTaskEdgeRow;
 use crate::dto::RequestValidateTrait;
 use crate::dto::error::ValidationError;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct WorkflowTaskEdgeRequest {
     pub from_task_id: String,
     pub to_task_id: String,
@@ -20,7 +21,7 @@ impl RequestValidateTrait for WorkflowTaskEdgeRequest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct WorkflowTaskEdgeResponse {
     pub id: String,
     pub from_task_id: String,
@@ -37,7 +38,7 @@ impl WorkflowTaskEdgeResponse {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct DeleteWorkflowTaskEdgeResponse {
     pub message: String,
 }

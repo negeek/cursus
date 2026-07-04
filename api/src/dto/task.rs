@@ -3,18 +3,21 @@ use crate::dto::error::ValidationError;
 use crate::util::type_conv::value_to_json;
 use crate::{dto::RequestValidateTrait, util::validate::validate_url};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct TaskResultSchema {
+    #[schema(value_type = Object)]
     pub data: serde_json::Value,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct TaskBody {
+    #[schema(value_type = Object)]
     pub data: serde_json::Value,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateTaskRequest {
     pub name: String,
     pub description: Option<String>,
@@ -30,7 +33,7 @@ impl RequestValidateTrait for CreateTaskRequest {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct EditTaskRequest {
     pub name: Option<String>,
     pub description: Option<String>,
@@ -48,7 +51,7 @@ impl RequestValidateTrait for EditTaskRequest {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct TaskResponse {
     pub id: String,
     pub name: String,
@@ -78,7 +81,8 @@ impl TaskResponse {
         }
     }
 }
-#[derive(Serialize)]
+
+#[derive(Serialize, ToSchema)]
 pub struct DeleteTaskResponse {
     pub message: String,
 }

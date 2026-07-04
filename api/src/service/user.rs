@@ -51,7 +51,7 @@ impl UserService {
         let password_hash = match password_hash_result {
             Ok(hash) => hash,
             Err(e) => {
-                println!("Error hashing password: {}", e);
+                tracing::error!(error = %e, "password hashing failed");
                 return Err(UserServiceError::HashingFailed);
             }
         };
@@ -102,8 +102,8 @@ impl UserService {
             ..Default::default()
         };
         let _ = self.user_verify_repository.create(db, verify_data).await?;
-        // TODO: Now we need to send an email. Let's log it for now
-        println!("User Verification code is {code}");
+        // TODO: send via email — logging until email service is wired up
+        tracing::info!(user_id = %user_id, code = %code, "verification code generated");
         Ok(existing_user.unwrap())
     }
 
