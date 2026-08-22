@@ -104,31 +104,4 @@ impl WorkflowTaskEdgeRepository {
             .exec(db)
             .await
     }
-
-    /// Removes every edge touching a step, from either direction.
-    ///
-    /// This exists because `WorkflowTask` cannot declare `has_many` back to this
-    /// table. It would need two of them, incoming and outgoing, and toasty has
-    /// no way to tell a pair of `has_many` to the same target apart. So deleting
-    /// a step does NOT clean up its edges automatically, and the delete path has
-    /// to call this first or it leaves a broken graph behind.
-    pub async fn delete_for_task(
-        &self,
-        db: &mut toasty::Db,
-        workflow_task_id: Uuid,
-    ) -> Result<(), toasty::Error> {
-        WorkflowTaskEdge::filter(
-            WorkflowTaskEdge::fields()
-                .from_task_id()
-                .eq(workflow_task_id),
-        )
-        .delete()
-        .exec(db)
-        .await?;
-
-        WorkflowTaskEdge::filter(WorkflowTaskEdge::fields().to_task_id().eq(workflow_task_id))
-            .delete()
-            .exec(db)
-            .await
-    }
 }

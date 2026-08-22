@@ -6,17 +6,14 @@ use crate::models::{Workflow, WorkflowTask};
 /// A dependency between two steps: `to_task` may not start until `from_task`
 /// finishes. These rows are the DAG.
 ///
-/// Two things about this model are worth knowing before changing it.
+/// Both `from_task` and `to_task` point at the same table, which needs care in
+/// two places. Here, the distinct field names are enough on their own, so
+/// neither carries a disambiguating attribute. On the other side, where
+/// `WorkflowTask` declares the matching `has_many` pair, the field name is not
+/// enough and each one has to name the relation it reverses with `pair`.
 ///
-/// First, both `from_task` and `to_task` point at the same table. sea-orm needed
-/// an explicit `relation_enum` to tell them apart. Toasty does not, the distinct
-/// field names are enough on their own.
-///
-/// Second, and less comfortably, `WorkflowTask` cannot declare `has_many` back
-/// to this model. It would need two of them, outgoing and incoming, and toasty
-/// offers no way to disambiguate a pair of `has_many` pointing at the same
-/// target. The consequence is that deleting a `WorkflowTask` will NOT clean up
-/// the edges referencing it, so the delete path has to remove them explicitly.
+/// Those reverse relations are what make deleting a step take its edges with
+/// it, in both directions. Nothing here has to be cleaned up by hand.
 // Toasty generates an accessor named after each field, so `from_task` becomes a
 // `from_*` method taking self. Clippy reads that as breaking the constructor
 // naming convention, but the name is the domain's, saying which end of the edge

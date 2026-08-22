@@ -3,7 +3,7 @@ use serde_json::Value;
 use toasty::stmt::Json;
 use uuid::Uuid;
 
-use crate::models::{Task, Workflow, WorkflowTaskState};
+use crate::models::{Task, Workflow, WorkflowTaskEdge, WorkflowTaskState};
 
 /// One step in a workflow: a task, placed in a particular workflow, under a name
 /// unique to that workflow.
@@ -53,4 +53,18 @@ pub struct WorkflowTask {
 
     #[has_many]
     pub workflow_task_states: toasty::Deferred<Vec<WorkflowTaskState>>,
+
+    /// Edges leaving this step, and edges arriving at it.
+    ///
+    /// Both point at the same table, so each names the `belongs_to` it pairs
+    /// with. Without `pair` toasty cannot tell which relation each one is the
+    /// reverse of, since the field name alone is ambiguous.
+    ///
+    /// Declaring these is what makes deleting a step take its edges with it,
+    /// rather than leaving them behind pointing at nothing.
+    #[has_many(pair = from_task)]
+    pub outgoing_edges: toasty::Deferred<Vec<WorkflowTaskEdge>>,
+
+    #[has_many(pair = to_task)]
+    pub incoming_edges: toasty::Deferred<Vec<WorkflowTaskEdge>>,
 }

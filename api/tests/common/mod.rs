@@ -1,3 +1,10 @@
+//! Shared test helpers.
+//!
+//! Every integration test file compiles this module separately, and none of
+//! them use all of it, so anything a given binary happens not to call would
+//! otherwise be reported as dead code.
+#![allow(dead_code)]
+
 pub mod db;
 pub mod path;
 pub mod task;

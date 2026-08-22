@@ -9,14 +9,12 @@ use crate::repositories::workflow::WorkflowRepository;
 use crate::repositories::workflow_task::{
     CreateWorkflowTaskParams, UpdateWorkflowTaskParams, WorkflowTaskRepository,
 };
-use crate::repositories::workflow_task_edge::WorkflowTaskEdgeRepository;
 use crate::util::type_conv::{json_to_value, option_u32_to_option_i32};
 
 pub struct WorkflowTaskService {
     workflows: WorkflowRepository,
     workflow_tasks: WorkflowTaskRepository,
     tasks: TaskRepository,
-    edges: WorkflowTaskEdgeRepository,
 }
 
 impl Default for WorkflowTaskService {
@@ -31,7 +29,6 @@ impl WorkflowTaskService {
             workflows: WorkflowRepository,
             workflow_tasks: WorkflowTaskRepository,
             tasks: TaskRepository,
-            edges: WorkflowTaskEdgeRepository,
         }
     }
 
@@ -214,13 +211,10 @@ impl WorkflowTaskService {
         self.step_in_workflow(db, workflow_id, workflow_task_id)
             .await?;
 
-        // Edges have to go first, and explicitly. WorkflowTask cannot declare
-        // has_many back to the edge table, because it would need two of them and
-        // toasty cannot tell a pair of has_many to the same target apart. So
-        // nothing cascades here, and skipping this would leave edges pointing at
-        // a step that no longer exists, which is a broken graph the runner would
-        // walk into.
-        self.edges.delete_for_task(db, workflow_task_id).await?;
+        // The step's edges go with it, in both directions, because WorkflowTask
+        // declares the paired has_many relations. That happens for any delete of
+        // a step, not just this one, so there is no path that can leave an edge
+        // pointing at a step which no longer exists.
         self.workflow_tasks.delete(db, workflow_task_id).await?;
         Ok(())
     }
