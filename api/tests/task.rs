@@ -5,15 +5,11 @@ use serde_json::json;
 
 const NONEXISTENT_ID: &str = "00000000-0000-0000-0000-000000000000";
 
-/// Tests are sequential for now
-/// TODO: Refactor tests to be independent and run in parallel
-
 #[actix_web::test]
 async fn test_create_task_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
 
     let auth_header = (
         header::AUTHORIZATION,
@@ -23,7 +19,7 @@ async fn test_create_task_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::CREATE_LIST_TASK)
-            .set_json(&json!({
+            .set_json(json!({
                "name": "send_email",
                "description": "Send an email to user",
                "endpoint": "https://webhook.com/",
@@ -52,16 +48,15 @@ async fn test_create_task_success() {
 
 #[actix_web::test]
 async fn test_edit_task_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
     );
-    let task = common::task::test_task(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let task = common::task::test_task(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::patch()
@@ -69,7 +64,7 @@ async fn test_edit_task_success() {
                 &common::path::Paths::GET_EDIT_DELETE_TASK
                     .replace("{task_id}", &task.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                "name": "send_email",
                "description": "Send an email to user",
                "endpoint": "https://webhooks.com/",
@@ -98,16 +93,15 @@ async fn test_edit_task_success() {
 
 #[actix_web::test]
 async fn test_delete_task_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
     );
-    let task = common::task::test_task(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let task = common::task::test_task(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::delete()
@@ -129,16 +123,15 @@ async fn test_delete_task_success() {
 
 #[actix_web::test]
 async fn test_get_task_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
     );
-    let task = common::task::test_task(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let task = common::task::test_task(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -160,20 +153,19 @@ async fn test_get_task_success() {
 
 #[actix_web::test]
 async fn test_list_tasks_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
     );
-    common::task::test_task(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    common::task::test_task(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
-            .uri(&common::path::Paths::CREATE_LIST_TASK)
+            .uri(common::path::Paths::CREATE_LIST_TASK)
             .insert_header(auth_header)
             .to_request(),
     )
@@ -186,18 +178,12 @@ async fn test_list_tasks_success() {
 #[actix_web::test]
 async fn test_task_endpoints_unauthenticated() {
     let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let app = common::setup_app(db).await;
+    let app = common::setup_app(db.clone()).await;
 
     let task_url = common::path::Paths::GET_EDIT_DELETE_TASK.replace("{task_id}", NONEXISTENT_ID);
 
-    let unauth_status = |r: Result<_, actix_web::Error>| {
-        r.map(|resp: actix_web::dev::ServiceResponse| resp.status())
-            .unwrap_or_else(|e| e.as_response_error().status_code())
-    };
-
     assert_eq!(
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::get()
@@ -209,12 +195,12 @@ async fn test_task_endpoints_unauthenticated() {
         401
     );
     assert_eq!(
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::post()
                     .uri(common::path::Paths::CREATE_LIST_TASK)
-                    .set_json(&json!({"name": "t", "endpoint": "https://x.com"}))
+                    .set_json(json!({"name": "t", "endpoint": "https://x.com"}))
                     .to_request()
             )
             .await
@@ -222,19 +208,19 @@ async fn test_task_endpoints_unauthenticated() {
         401
     );
     assert_eq!(
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(&app, test::TestRequest::get().uri(&task_url).to_request())
                 .await
         ),
         401
     );
     assert_eq!(
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::patch()
                     .uri(&task_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request()
             )
             .await
@@ -242,7 +228,7 @@ async fn test_task_endpoints_unauthenticated() {
         401
     );
     assert_eq!(
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::delete().uri(&task_url).to_request()
@@ -255,10 +241,9 @@ async fn test_task_endpoints_unauthenticated() {
 
 #[actix_web::test]
 async fn test_get_task_not_found() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
@@ -276,10 +261,9 @@ async fn test_get_task_not_found() {
 
 #[actix_web::test]
 async fn test_edit_task_not_found() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
@@ -288,7 +272,7 @@ async fn test_edit_task_not_found() {
         &app,
         test::TestRequest::patch()
             .uri(&common::path::Paths::GET_EDIT_DELETE_TASK.replace("{task_id}", NONEXISTENT_ID))
-            .set_json(&json!({"name": "updated"}))
+            .set_json(json!({"name": "updated"}))
             .insert_header(auth_header)
             .to_request(),
     )
@@ -298,10 +282,9 @@ async fn test_edit_task_not_found() {
 
 #[actix_web::test]
 async fn test_delete_task_not_found() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
     let auth_header = (
         header::AUTHORIZATION,
         format!("Bearer {}", test_tokens.access),
@@ -319,23 +302,17 @@ async fn test_delete_task_not_found() {
 
 #[actix_web::test]
 async fn test_get_task_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let task = common::task::test_task(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@gmail.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let task = common::task::test_task(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@gmail.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -355,23 +332,17 @@ async fn test_get_task_wrong_user() {
 
 #[actix_web::test]
 async fn test_edit_task_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let task = common::task::test_task(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@gmail.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let task = common::task::test_task(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@gmail.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::patch()
@@ -379,7 +350,7 @@ async fn test_edit_task_wrong_user() {
                 &common::path::Paths::GET_EDIT_DELETE_TASK
                     .replace("{task_id}", &task.id.to_string()),
             )
-            .set_json(&json!({"name": "hacked"}))
+            .set_json(json!({"name": "hacked"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", other_tokens.access),
@@ -392,23 +363,17 @@ async fn test_edit_task_wrong_user() {
 
 #[actix_web::test]
 async fn test_delete_task_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let task = common::task::test_task(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@gmail.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let task = common::task::test_task(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@gmail.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::delete()

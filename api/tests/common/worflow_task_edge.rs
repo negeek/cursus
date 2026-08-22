@@ -1,28 +1,26 @@
-use api::db::entity::workflow_task_edge::{
-    ActiveModel as WorkflowTaskEdgeOp, Model as WorkflowTaskEdgeRow,
+use api::models::WorkflowTaskEdge;
+use api::repositories::workflow_task_edge::{
+    CreateWorkflowTaskEdgeParams, WorkflowTaskEdgeRepository,
 };
-use api::db::repository::{RepositoryTrait, workflow_task_edge::WorkflowTaskEdgeRepository};
-use sea_orm::ActiveValue::Set;
-use sea_orm::DatabaseConnection;
+use toasty::Db;
+use uuid::Uuid;
 
+/// A dependency from one step to another within a workflow.
 pub async fn test_workflow_task_edge(
-    db: &DatabaseConnection,
+    db: &mut Db,
     workflow_id: String,
     from_task_id: String,
     to_task_id: String,
-) -> WorkflowTaskEdgeRow {
-    let workflow_task_edge_data = WorkflowTaskEdgeOp {
-        id: Default::default(),
-        workflow_id: Set(uuid::Uuid::parse_str(&workflow_id).unwrap()),
-        from_task_id: Set(uuid::Uuid::parse_str(&from_task_id).unwrap()),
-        to_task_id: Set(uuid::Uuid::parse_str(&to_task_id).unwrap()),
-        ..Default::default()
-    };
-    let workflow_res = WorkflowTaskEdgeRepository {}
-        .create(db, workflow_task_edge_data)
-        .await;
-    match workflow_res {
-        Ok(w) => return w,
-        Err(e) => panic!("Error: {}", e),
-    };
+) -> WorkflowTaskEdge {
+    WorkflowTaskEdgeRepository
+        .create(
+            db,
+            CreateWorkflowTaskEdgeParams {
+                workflow_id: Uuid::parse_str(&workflow_id).expect("workflow id must be a uuid"),
+                from_task_id: Uuid::parse_str(&from_task_id).expect("from id must be a uuid"),
+                to_task_id: Uuid::parse_str(&to_task_id).expect("to id must be a uuid"),
+            },
+        )
+        .await
+        .expect("failed to create the test workflow task edge")
 }

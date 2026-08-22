@@ -8,12 +8,13 @@ pub enum TokenType {
     Access,
     Refresh,
 }
-impl TokenType {
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Access => String::from("access"),
-            Self::Refresh => String::from("refresh"),
-        }
+impl std::fmt::Display for TokenType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Self::Access => "access",
+            Self::Refresh => "refresh",
+        };
+        f.write_str(name)
     }
 }
 
@@ -44,19 +45,33 @@ pub struct Claims {
     pub ttype: String,
 }
 
+/// A unix timestamp `days` from now, which is the shape JWT `exp` claims take.
+///
+/// Counted in hours rather than days on purpose. A day is a calendar unit whose
+/// length depends on a time zone, so an absolute timestamp refuses to add one
+/// without a reference date. Token lifetimes are elapsed time, not calendar
+/// time, so a fixed 24 hours is the meaning wanted here anyway.
+fn expiry_in_days(days: i64) -> usize {
+    let span = jiff::Span::new().hours(days * 24);
+    jiff::Timestamp::now()
+        .checked_add(span)
+        .expect("token expiry is within the representable range")
+        .as_second() as usize
+}
+
 impl TokenCodec {
     /// Gives a default codec
     pub fn new(subject: String) -> Self {
-        return TokenCodec {
+        TokenCodec {
             alg: Algorithm::HS256,
             secret: TokenCodec::secret(),
-            access_expiry: (chrono::Utc::now() + chrono::TimeDelta::days(1)).timestamp() as usize,
-            refresh_expiry: (chrono::Utc::now() + chrono::TimeDelta::days(24)).timestamp() as usize,
-            issue_at: chrono::Utc::now().timestamp() as usize,
+            access_expiry: expiry_in_days(1),
+            refresh_expiry: expiry_in_days(24),
+            issue_at: jiff::Timestamp::now().as_second() as usize,
             issuer: TokenCodec::issuer(),
             audience: TokenCodec::audience(),
-            subject: subject,
-        };
+            subject,
+        }
     }
 
     pub fn secret() -> String {
@@ -90,7 +105,7 @@ impl TokenCodec {
             &claims,
             &EncodingKey::from_secret(self.secret.as_ref()),
         )?;
-        return Ok(token);
+        Ok(token)
     }
 
     /// Generates access and refresh token
@@ -98,10 +113,10 @@ impl TokenCodec {
     pub fn generate(&self) -> Result<Token, Error> {
         let access_token = self.generate_token(TokenType::Access)?;
         let refresh_token = self.generate_token(TokenType::Refresh)?;
-        return Ok(Token {
+        Ok(Token {
             access: access_token,
             refresh: refresh_token,
-        });
+        })
     }
 
     pub fn validate(token: &str) -> Result<Claims, Error> {

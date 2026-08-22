@@ -1,70 +1,75 @@
-use api::db::entity::token::{ActiveModel as BlacklistTokenOp, Model as BlacklistTokenRow};
-use api::db::entity::user::{ActiveModel as UserOp, Model as UserRow};
-use api::db::repository::{RepositoryTrait, token::BlacklistTokenRepository, user::UserRepository};
+use api::models::{BlacklistedToken, User};
+use api::repositories::token::{BlacklistTokenRepository, CreateBlacklistedTokenParams};
+use api::repositories::user::{CreateUserParams, UserRepository};
 use api::util::token::{Token, TokenCodec};
-use sea_orm::ActiveValue::Set;
-use sea_orm::DatabaseConnection;
+use toasty::Db;
 
-/// Useful test user that is verified
-pub async fn test_user(
-    db: &DatabaseConnection,
-    mut username: Option<String>,
-    mut email: Option<String>,
-) -> UserRow {
-    if username.is_none() {
-        username = Some(String::from("test_user"));
-    }
-    if email.is_none() {
-        email = Some(String::from("testuser@gmail.com"))
-    }
+/// A verified user, ready to act.
+///
+/// Username and email default to fixed values. Tests that need two users in the
+/// same database have to pass distinct ones, since email is unique.
+pub async fn test_user(db: &mut Db, username: Option<String>, email: Option<String>) -> User {
+    let user = UserRepository
+        .create(
+            db,
+            CreateUserParams {
+                username: username.unwrap_or_else(|| "test_user".to_string()),
+                email: email.unwrap_or_else(|| "testuser@gmail.com".to_string()),
+                password_hash: "password_hash".to_string(),
+            },
+        )
+        .await
+        .expect("failed to create the test user");
 
-    let user_data = UserOp {
-        id: Default::default(),
-        username: Set(username.unwrap()),
-        email: Set(email.unwrap()),
-        email_verified: Set(true),
-        password_hash: Set(String::from("password_hash")),
-        ..Default::default()
-    };
-    let user_res = UserRepository {}.create(db, user_data).await;
-    match user_res {
-        Ok(u) => return u,
-        Err(e) => panic!("Error: {}", e),
-    };
+    // Signup leaves an account unverified, but most tests want one that can
+    // already act, so this flips the flag rather than making every caller do it.
+    let mut user = user;
+    UserRepository
+        .update(
+            db,
+            &mut user,
+            api::repositories::user::UpdateUserParams {
+                email_verified: Some(true),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("failed to mark the test user verified");
+
+    user
 }
 
-/// Provides tokens for test user or user provided
-pub async fn test_tokens(db: &DatabaseConnection, mut user: Option<UserRow>) -> Token {
-    if user.is_none() {
-        let test_user = test_user(db, None, None).await;
-        user = Some(test_user)
-    }
-    let token_codec = TokenCodec::new(user.unwrap().id.to_string());
-    let token_res = token_codec.generate();
-    match token_res {
-        Ok(t) => return t,
-        Err(e) => panic!("Error: {}", e),
+/// Access and refresh tokens for a user, creating one if none is given.
+pub async fn test_tokens(db: &mut Db, user: Option<User>) -> Token {
+    let user = match user {
+        Some(user) => user,
+        None => test_user(db, None, None).await,
     };
+
+    TokenCodec::new(user.id.to_string())
+        .generate()
+        .expect("failed to generate test tokens")
 }
 
-/// Blacklists a token. Extracts jti and type from claims.
-/// Panics if token is invalid or DB insert fails.
-pub async fn test_blacklisted(db: &DatabaseConnection, token: String) -> BlacklistTokenRow {
-    let claims = match TokenCodec::validate(&token) {
-        Ok(c) => c,
-        Err(e) => panic!("Invalid token: {}", e),
-    };
-    let token_data = BlacklistTokenOp {
-        id: Default::default(),
-        jti: Set(claims.jti),
-        token_type: Set(claims.ttype),
-        expires_at: Set(
-            chrono::DateTime::from_timestamp_secs(claims.exp as i64).unwrap_or(chrono::Utc::now())
-        ),
-        ..Default::default()
-    };
-    match (BlacklistTokenRepository {}).create(db, token_data).await {
-        Ok(row) => row,
-        Err(e) => panic!("Failed to blacklist token: {}", e),
-    }
+/// Revokes a token, so tests can check a blacklisted one is refused.
+pub async fn test_blacklisted(db: &mut Db, token: String) -> BlacklistedToken {
+    let claims = TokenCodec::validate(&token).expect("cannot blacklist an invalid token");
+
+    BlacklistTokenRepository
+        .create(
+            db,
+            CreateBlacklistedTokenParams {
+                jti: claims.jti,
+                token_type: claims.ttype,
+                expires_at: expiry_from_claim(claims.exp),
+            },
+        )
+        .await
+        .expect("failed to blacklist the token")
+}
+
+fn expiry_from_claim(seconds: usize) -> jiff::civil::DateTime {
+    jiff::Timestamp::from_second(seconds as i64)
+        .map(|ts| ts.to_zoned(jiff::tz::TimeZone::UTC).datetime())
+        .unwrap_or_else(|_| api::models::now())
 }

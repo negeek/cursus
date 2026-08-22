@@ -1,40 +1,30 @@
-use api::db::entity::task::{ActiveModel as TaskOp, Model as TaskRow};
-use api::db::repository::{RepositoryTrait, task::TaskRepository};
-use sea_orm::ActiveValue::Set;
-use sea_orm::DatabaseConnection;
+use api::models::Task;
+use api::repositories::task::{CreateTaskParams, TaskRepository};
+use toasty::Db;
+use uuid::Uuid;
 
-pub async fn test_task(db: &DatabaseConnection, user_id: String) -> TaskRow {
-    let task_data = TaskOp {
-        id: Default::default(),
-        user_id: Set(uuid::Uuid::parse_str(&user_id).unwrap()),
-        name: Set(String::from("Test Task")),
-        description: Set(Some(String::from("This is a test task."))),
-        endpoint: Set(String::from("http://example.com/test-endpoint")),
-        result_schema: Set(Some(serde_json::json!({"result": {"status": "string"}}))),
-        body: Set(Some(serde_json::json!({"input": "string"}))),
-        ..Default::default()
-    };
-    let task_res = TaskRepository {}.create(db, task_data).await;
-    match task_res {
-        Ok(t) => return t,
-        Err(e) => panic!("Error: {}", e),
-    };
+/// A task owned by the given user, with a fixed name.
+pub async fn test_task(db: &mut Db, user_id: String) -> Task {
+    test_task_dyn(db, user_id, String::from("Test Task")).await
 }
 
-pub async fn test_task_dyn(db: &DatabaseConnection, user_id: String, name: String) -> TaskRow {
-    let task_data = TaskOp {
-        id: Default::default(),
-        user_id: Set(uuid::Uuid::parse_str(&user_id).unwrap()),
-        name: Set(name),
-        description: Set(Some(String::from("This is a test task."))),
-        endpoint: Set(String::from("http://example.com/test-endpoint")),
-        result_schema: Set(Some(serde_json::json!({"result": {"status": "string"}}))),
-        body: Set(Some(serde_json::json!({"input": "string"}))),
-        ..Default::default()
-    };
-    let task_res = TaskRepository {}.create(db, task_data).await;
-    match task_res {
-        Ok(t) => return t,
-        Err(e) => panic!("Error: {}", e),
-    };
+/// A task owned by the given user, under a name the caller chooses.
+///
+/// Tests that need several tasks in one workflow use this, since a fixed name
+/// would make them indistinguishable.
+pub async fn test_task_dyn(db: &mut Db, user_id: String, name: String) -> Task {
+    TaskRepository
+        .create(
+            db,
+            CreateTaskParams {
+                user_id: Uuid::parse_str(&user_id).expect("test user id must be a uuid"),
+                name,
+                description: Some(String::from("This is a test task.")),
+                endpoint: String::from("http://example.com/test-endpoint"),
+                result_schema: Some(serde_json::json!({"result": {"status": "string"}})),
+                body: Some(serde_json::json!({"input": "string"})),
+            },
+        )
+        .await
+        .expect("failed to create the test task")
 }

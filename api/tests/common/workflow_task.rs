@@ -1,37 +1,43 @@
-use api::db::entity::workflow_task::{ActiveModel as WorkflowTaskOp, Model as WorkflowTaskRow};
-use api::db::repository::{RepositoryTrait, workflow_task::WorkflowTaskRepository};
-use sea_orm::ActiveValue::Set;
-use sea_orm::DatabaseConnection;
+use api::models::WorkflowTask;
+use api::repositories::workflow_task::{CreateWorkflowTaskParams, WorkflowTaskRepository};
+use toasty::Db;
+use uuid::Uuid;
 
+/// A step placing a task into a workflow, named "Step_1".
 pub async fn test_workflow_task(
-    db: &DatabaseConnection,
+    db: &mut Db,
     workflow_id: String,
     task_id: String,
     position: i32,
-) -> WorkflowTaskRow {
+) -> WorkflowTask {
     test_workflow_task_dyn(db, workflow_id, task_id, position, String::from("Step_1")).await
 }
 
+/// The same, under a name the caller chooses.
+///
+/// Step names are unique within a workflow, so any test building more than one
+/// step has to use this rather than the fixed name above.
 pub async fn test_workflow_task_dyn(
-    db: &DatabaseConnection,
+    db: &mut Db,
     workflow_id: String,
     task_id: String,
     position: i32,
     step_name: String,
-) -> WorkflowTaskRow {
-    let workflow_task_data = WorkflowTaskOp {
-        id: Default::default(),
-        workflow_id: Set(uuid::Uuid::parse_str(&workflow_id).unwrap()),
-        task_id: Set(uuid::Uuid::parse_str(&task_id).unwrap()),
-        step_name: Set(step_name),
-        run_position: Set(position),
-        ..Default::default()
-    };
-    let workflow_res = WorkflowTaskRepository {}
-        .create(db, workflow_task_data)
-        .await;
-    match workflow_res {
-        Ok(w) => return w,
-        Err(e) => panic!("Error: {}", e),
-    };
+) -> WorkflowTask {
+    WorkflowTaskRepository
+        .create(
+            db,
+            CreateWorkflowTaskParams {
+                workflow_id: Uuid::parse_str(&workflow_id).expect("workflow id must be a uuid"),
+                task_id: Uuid::parse_str(&task_id).expect("task id must be a uuid"),
+                step_name,
+                task_body: None,
+                task_result_schema: None,
+                run_position: position,
+                retry_count: None,
+                retry_delay_secs: None,
+            },
+        )
+        .await
+        .expect("failed to create the test workflow task")
 }
