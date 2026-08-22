@@ -5,12 +5,12 @@ use serde_json::json;
 
 #[actix_web::test]
 async fn test_signup_success() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
+        .set_json(json!({
             "username": "testuser",
             "email": "testuser@example.com",
             "password": "testpassword"
@@ -23,12 +23,12 @@ async fn test_signup_success() {
 
 #[actix_web::test]
 async fn test_signup_email_400() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
+        .set_json(json!({
             "username": "testuser",
             "email": "testuserexample.com",
             "password": "testpassword"
@@ -41,12 +41,12 @@ async fn test_signup_email_400() {
 
 #[actix_web::test]
 async fn test_signup_name_400() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
+        .set_json(json!({
             "username": "t",
             "email": "testuser@example.com",
             "password": "testpassword"
@@ -59,12 +59,12 @@ async fn test_signup_name_400() {
 
 #[actix_web::test]
 async fn test_signup_password_400() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNUP)
-        .set_json(&json!({
+        .set_json(json!({
             "username": "testuser",
             "email": "testuser@example.com",
             "password": "t"
@@ -77,14 +77,14 @@ async fn test_signup_password_400() {
 
 #[actix_web::test]
 async fn test_signup_user_exist_409() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let _ = test::call_service(
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNUP)
-            .set_json(&json!({
+            .set_json(json!({
                 "username": "testuser",
                 "email": "testuser@example.com",
                 "password": "testpassword"
@@ -97,7 +97,7 @@ async fn test_signup_user_exist_409() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNUP)
-            .set_json(&json!({
+            .set_json(json!({
                 "username": "testuser",
                 "email": "testuser@example.com",
                 "password": "testpassword"
@@ -110,12 +110,12 @@ async fn test_signup_user_exist_409() {
 
 #[actix_web::test]
 async fn test_signin_invalid_creds() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNIN)
-        .set_json(&json!({
+        .set_json(json!({
             "email": "testuser@example.com",
             "password": "testpassword"
         }))
@@ -126,14 +126,14 @@ async fn test_signin_invalid_creds() {
 
 #[actix_web::test]
 async fn test_signin_success() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let _ = test::call_service(
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNUP)
-            .set_json(&json!({
+            .set_json(json!({
                 "username": "testuser",
                 "email": "testuser@example.com",
                 "password": "testpassword"
@@ -144,7 +144,7 @@ async fn test_signin_success() {
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::SIGNIN)
-        .set_json(&json!({
+        .set_json(json!({
             "email": "testuser@example.com",
             "password": "testpassword"
         }))
@@ -166,7 +166,7 @@ async fn test_verify_email_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNUP)
-            .set_json(&json!({
+            .set_json(json!({
                 "username": "testuser",
                 "email": "testuser@example.com",
                 "password": "testpassword"
@@ -179,7 +179,7 @@ async fn test_verify_email_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNIN)
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "testuser@example.com",
                 "password": "testpassword"
             }))
@@ -200,7 +200,7 @@ async fn test_verify_email_success() {
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::VERIFY_EMAIL)
-        .set_json(&json!({
+        .set_json(json!({
             "id": user_id,
             "code": code
         }))
@@ -216,14 +216,14 @@ async fn test_verify_email_success() {
 
 #[actix_web::test]
 async fn test_verify_email_wrong_code() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let _ = test::call_service(
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNUP)
-            .set_json(&json!({
+            .set_json(json!({
                 "username": "testuser",
                 "email": "testuser@example.com",
                 "password": "testpassword"
@@ -236,7 +236,7 @@ async fn test_verify_email_wrong_code() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::SIGNIN)
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "testuser@example.com",
                 "password": "testpassword"
             }))
@@ -248,7 +248,7 @@ async fn test_verify_email_wrong_code() {
 
     let req = test::TestRequest::post()
         .uri(common::path::Paths::VERIFY_EMAIL)
-        .set_json(&json!({
+        .set_json(json!({
             "id": user_id,
             "code": "WRONG1"
         }))
@@ -271,7 +271,7 @@ async fn test_logout_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::LOGOUT)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": test_tokens.refresh
             }))
             .insert_header(auth_header)
@@ -297,7 +297,7 @@ async fn test_logout_invalid_token() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::LOGOUT)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": "test_tokens.refresh"
             }))
             .insert_header(auth_header)
@@ -328,7 +328,7 @@ async fn test_logout_invalid_for_user() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::LOGOUT)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": test_tokens2.refresh
             }))
             .insert_header(auth_header)
@@ -347,7 +347,7 @@ async fn test_refresh_access_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::REFRESH_ACCESS)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": test_tokens.refresh
             }))
             .to_request(),
@@ -367,7 +367,7 @@ async fn test_refresh_access_with_access_token_401() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::REFRESH_ACCESS)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": test_tokens.access
             }))
             .to_request(),
@@ -386,7 +386,7 @@ async fn test_refresh_access_blacklisted_401() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::REFRESH_ACCESS)
-            .set_json(&json!({
+            .set_json(json!({
                "refresh_token": test_tokens.refresh
             }))
             .to_request(),

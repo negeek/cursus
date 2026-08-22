@@ -27,7 +27,7 @@ impl RequestValidateTrait for CreateWorkflowTaskRequest {
                 ),
             });
         }
-        if !(self.retry_count.is_some() == self.retry_delay_secs.is_some()) {
+        if self.retry_count.is_some() != self.retry_delay_secs.is_some() {
             return Err(ValidationError {
                 field: String::from("retry_count/retry_delay_secs"),
                 message: String::from(
@@ -51,7 +51,7 @@ pub struct EditWorkflowTaskRequest {
 
 impl RequestValidateTrait for EditWorkflowTaskRequest {
     fn validate(&self) -> Result<(), ValidationError> {
-        if !(self.retry_count.is_some() == self.retry_delay_secs.is_some()) {
+        if self.retry_count.is_some() != self.retry_delay_secs.is_some() {
             return Err(ValidationError {
                 field: String::from("retry_count/retry_delay_secs"),
                 message: String::from(

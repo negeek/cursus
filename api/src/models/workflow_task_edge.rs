@@ -17,7 +17,11 @@ use crate::models::{Workflow, WorkflowTask};
 /// offers no way to disambiguate a pair of `has_many` pointing at the same
 /// target. The consequence is that deleting a `WorkflowTask` will NOT clean up
 /// the edges referencing it, so the delete path has to remove them explicitly.
-/// See docs/restructure-plan.md section 0, finding 6.
+// Toasty generates an accessor named after each field, so `from_task` becomes a
+// `from_*` method taking self. Clippy reads that as breaking the constructor
+// naming convention, but the name is the domain's, saying which end of the edge
+// it is, and renaming the field to satisfy the lint would lose that meaning.
+#[allow(clippy::wrong_self_convention)]
 #[derive(Clone, Debug, toasty::Model)]
 #[table = "workflow_task_edges"]
 #[unique(workflow_id, from_task_id, to_task_id)]

@@ -19,7 +19,7 @@ async fn test_create_workflow_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::CREATE_LIST_WORKFLOW)
-            .set_json(&json!({
+            .set_json(json!({
                 "name": "Test Workflow",
                 "description": "This is a test workflow.",
                 "run_type": "manual",
@@ -101,7 +101,7 @@ async fn test_edit_workflow_success() {
                 &common::path::Paths::GET_EDIT_DELETE_WORKFLOW
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({"name": "Updated Workflow"}))
+            .set_json(json!({"name": "Updated Workflow"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", test_tokens.access),
@@ -200,7 +200,7 @@ async fn test_get_workflow_detail_success() {
 
 #[actix_web::test]
 async fn test_workflow_endpoints_unauthenticated() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
     let wf_url =
         common::path::Paths::GET_EDIT_DELETE_WORKFLOW.replace("{workflow_id}", NONEXISTENT_ID);
@@ -220,7 +220,7 @@ async fn test_workflow_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::post()
                     .uri(common::path::Paths::CREATE_LIST_WORKFLOW)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -233,7 +233,7 @@ async fn test_workflow_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::patch()
                     .uri(&wf_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -319,7 +319,7 @@ async fn test_edit_workflow_wrong_user() {
                 &common::path::Paths::GET_EDIT_DELETE_WORKFLOW
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({"name": "hacked"}))
+            .set_json(json!({"name": "hacked"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", other_tokens.access),

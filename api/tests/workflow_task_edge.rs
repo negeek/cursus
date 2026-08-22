@@ -50,7 +50,7 @@ async fn test_create_workflow_task_edge_success() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK_EDGE
                     .replace("{workflow_id}", test_workflow.id.to_string().as_str()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "from_task_id": test_workflow_task1.id.to_string().as_str(),
                 "to_task_id": test_workflow_task2.id.to_string().as_str()
             }))
@@ -117,7 +117,7 @@ async fn test_delete_workflow_task_edge_success() {
 
 #[actix_web::test]
 async fn test_workflow_task_edge_endpoints_unauthenticated() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
     let create_url =
         common::path::Paths::CREATE_WORKFLOW_TASK_EDGE.replace("{workflow_id}", NONEXISTENT_ID);
@@ -131,7 +131,7 @@ async fn test_workflow_task_edge_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::post()
                     .uri(&create_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -141,7 +141,7 @@ async fn test_workflow_task_edge_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::patch()
                     .uri(&item_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -197,7 +197,7 @@ async fn test_create_workflow_task_edge_duplicate() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK_EDGE
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "from_task_id": wt1.id.to_string(),
                 "to_task_id": wt2.id.to_string()
             }))
@@ -225,7 +225,7 @@ async fn test_create_workflow_task_edge_self_loop() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK_EDGE
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "from_task_id": NONEXISTENT_ID,
                 "to_task_id": NONEXISTENT_ID
             }))

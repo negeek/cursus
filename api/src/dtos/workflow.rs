@@ -26,13 +26,16 @@ impl WorkflowRunType {
             _ => None,
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        match self {
-            WorkflowRunType::Manual => "manual".into(),
-            WorkflowRunType::Scheduled => "scheduled".into(),
-            WorkflowRunType::Cron => "cron".into(),
-        }
+impl std::fmt::Display for WorkflowRunType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            WorkflowRunType::Manual => "manual",
+            WorkflowRunType::Scheduled => "scheduled",
+            WorkflowRunType::Cron => "cron",
+        };
+        f.write_str(name)
     }
 }
 
@@ -65,25 +68,23 @@ impl RequestValidateTrait for CreateWorkflowRequest {
                 message: String::from("cron_expression is required for cron run_type"),
             });
         }
-        if self.run_type == WorkflowRunType::Scheduled.to_string() {
-            if let Some(ref schedule_time) = self.schedule_time {
-                if schedule_time.parse::<jiff::Timestamp>().is_err() {
-                    return Err(ValidationError {
-                        field: String::from("schedule_time"),
-                        message: String::from("Invalid schedule_time format, must be ISO 8601"),
-                    });
-                }
-            }
+        if self.run_type == WorkflowRunType::Scheduled.to_string()
+            && let Some(ref schedule_time) = self.schedule_time
+            && schedule_time.parse::<jiff::Timestamp>().is_err()
+        {
+            return Err(ValidationError {
+                field: String::from("schedule_time"),
+                message: String::from("Invalid schedule_time format, must be ISO 8601"),
+            });
         }
-        if self.run_type == WorkflowRunType::Cron.to_string() {
-            if let Some(ref cron_expression) = self.cron_expression {
-                if Schedule::from_str(cron_expression).is_err() {
-                    return Err(ValidationError {
-                        field: String::from("cron_expression"),
-                        message: String::from("Invalid cron_expression format"),
-                    });
-                }
-            }
+        if self.run_type == WorkflowRunType::Cron.to_string()
+            && let Some(ref cron_expression) = self.cron_expression
+            && Schedule::from_str(cron_expression).is_err()
+        {
+            return Err(ValidationError {
+                field: String::from("cron_expression"),
+                message: String::from("Invalid cron_expression format"),
+            });
         }
         Ok(())
     }
@@ -101,8 +102,7 @@ pub struct EditWorkflowRequest {
 
 impl RequestValidateTrait for EditWorkflowRequest {
     fn validate(&self) -> Result<(), ValidationError> {
-        if self.run_type.is_some() {
-            let run_type = self.run_type.as_ref().unwrap();
+        if let Some(run_type) = self.run_type.as_ref() {
             if WorkflowRunType::from_string(run_type).is_none() {
                 return Err(ValidationError {
                     field: String::from("run_type"),
@@ -123,25 +123,23 @@ impl RequestValidateTrait for EditWorkflowRequest {
                     message: String::from("cron_expression is required for cron run_type"),
                 });
             }
-            if run_type == &WorkflowRunType::Scheduled.to_string() {
-                if let Some(ref schedule_time) = self.schedule_time {
-                    if schedule_time.parse::<jiff::Timestamp>().is_err() {
-                        return Err(ValidationError {
-                            field: String::from("schedule_time"),
-                            message: String::from("Invalid schedule_time format, must be ISO 8601"),
-                        });
-                    }
-                }
+            if run_type == &WorkflowRunType::Scheduled.to_string()
+                && let Some(ref schedule_time) = self.schedule_time
+                && schedule_time.parse::<jiff::Timestamp>().is_err()
+            {
+                return Err(ValidationError {
+                    field: String::from("schedule_time"),
+                    message: String::from("Invalid schedule_time format, must be ISO 8601"),
+                });
             }
-            if run_type == &WorkflowRunType::Cron.to_string() {
-                if let Some(ref cron_expression) = self.cron_expression {
-                    if Schedule::from_str(cron_expression).is_err() {
-                        return Err(ValidationError {
-                            field: String::from("cron_expression"),
-                            message: String::from("Invalid cron_expression format"),
-                        });
-                    }
-                }
+            if run_type == &WorkflowRunType::Cron.to_string()
+                && let Some(ref cron_expression) = self.cron_expression
+                && Schedule::from_str(cron_expression).is_err()
+            {
+                return Err(ValidationError {
+                    field: String::from("cron_expression"),
+                    message: String::from("Invalid cron_expression format"),
+                });
             }
         }
         Ok(())
@@ -184,13 +182,13 @@ impl WorkflowDetailResponse {
             run_type: workflow_row.run_type,
             schedule_time: workflow_row
                 .schedule_time
-                .map(|dt| crate::util::type_conv::datetime_to_rfc3339(dt)),
+                .map(crate::util::type_conv::datetime_to_rfc3339),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
             date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),
             date_updated: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_updated),
-            tasks: tasks,
-            edges: edges,
+            tasks,
+            edges,
         }
     }
 }
@@ -222,7 +220,7 @@ impl WorkflowResponse {
             run_type: workflow_row.run_type,
             schedule_time: workflow_row
                 .schedule_time
-                .map(|dt| crate::util::type_conv::datetime_to_rfc3339(dt)),
+                .map(crate::util::type_conv::datetime_to_rfc3339),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
             date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),

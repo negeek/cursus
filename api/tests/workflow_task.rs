@@ -27,7 +27,7 @@ async fn test_create_workflow_success() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK
                     .replace("{workflow_id}", test_workflow.id.to_string().as_str()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "task_id": test_task.id.to_string(),
                 "step_name": "Test_Step",
                 "task_body": {"data": {"input": "test input"}},
@@ -103,7 +103,7 @@ async fn test_edit_workflow_task_success() {
                     .replace("{workflow_id}", &workflow.id.to_string())
                     .replace("{workflow_task_id}", &wt.id.to_string()),
             )
-            .set_json(&json!({"step_name": "Updated_Step"}))
+            .set_json(json!({"step_name": "Updated_Step"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", test_tokens.access),
@@ -161,7 +161,7 @@ async fn test_delete_workflow_task_success() {
 
 #[actix_web::test]
 async fn test_workflow_task_endpoints_unauthenticated() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
     let list_create_url =
         common::path::Paths::CREATE_WORKFLOW_TASK.replace("{workflow_id}", NONEXISTENT_ID);
@@ -175,7 +175,7 @@ async fn test_workflow_task_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::post()
                     .uri(&list_create_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -189,7 +189,7 @@ async fn test_workflow_task_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::patch()
                     .uri(&item_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request(),
             )
             .await,
@@ -228,7 +228,7 @@ async fn test_create_workflow_task_duplicate_step_name() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "task_id": task.id.to_string(),
                 "step_name": "Step_1",
                 "run_position": 2
@@ -258,7 +258,7 @@ async fn test_create_workflow_task_space_in_step_name() {
                 &common::path::Paths::CREATE_WORKFLOW_TASK
                     .replace("{workflow_id}", &workflow.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                 "task_id": task.id.to_string(),
                 "step_name": "invalid step name",
                 "run_position": 1
@@ -341,7 +341,7 @@ async fn test_edit_workflow_task_wrong_user() {
                     .replace("{workflow_id}", &workflow.id.to_string())
                     .replace("{workflow_task_id}", &wt.id.to_string()),
             )
-            .set_json(&json!({"step_name": "Hacked_Step"}))
+            .set_json(json!({"step_name": "Hacked_Step"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", other_tokens.access),

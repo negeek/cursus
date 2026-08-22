@@ -19,7 +19,7 @@ async fn test_create_task_success() {
         &app,
         test::TestRequest::post()
             .uri(common::path::Paths::CREATE_LIST_TASK)
-            .set_json(&json!({
+            .set_json(json!({
                "name": "send_email",
                "description": "Send an email to user",
                "endpoint": "https://webhook.com/",
@@ -64,7 +64,7 @@ async fn test_edit_task_success() {
                 &common::path::Paths::GET_EDIT_DELETE_TASK
                     .replace("{task_id}", &task.id.to_string()),
             )
-            .set_json(&json!({
+            .set_json(json!({
                "name": "send_email",
                "description": "Send an email to user",
                "endpoint": "https://webhooks.com/",
@@ -165,7 +165,7 @@ async fn test_list_tasks_success() {
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
-            .uri(&common::path::Paths::CREATE_LIST_TASK)
+            .uri(common::path::Paths::CREATE_LIST_TASK)
             .insert_header(auth_header)
             .to_request(),
     )
@@ -177,7 +177,7 @@ async fn test_list_tasks_success() {
 
 #[actix_web::test]
 async fn test_task_endpoints_unauthenticated() {
-    let mut db = common::test_db().await;
+    let db = common::test_db().await;
     let app = common::setup_app(db.clone()).await;
 
     let task_url = common::path::Paths::GET_EDIT_DELETE_TASK.replace("{task_id}", NONEXISTENT_ID);
@@ -200,7 +200,7 @@ async fn test_task_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::post()
                     .uri(common::path::Paths::CREATE_LIST_TASK)
-                    .set_json(&json!({"name": "t", "endpoint": "https://x.com"}))
+                    .set_json(json!({"name": "t", "endpoint": "https://x.com"}))
                     .to_request()
             )
             .await
@@ -220,7 +220,7 @@ async fn test_task_endpoints_unauthenticated() {
                 &app,
                 test::TestRequest::patch()
                     .uri(&task_url)
-                    .set_json(&json!({}))
+                    .set_json(json!({}))
                     .to_request()
             )
             .await
@@ -272,7 +272,7 @@ async fn test_edit_task_not_found() {
         &app,
         test::TestRequest::patch()
             .uri(&common::path::Paths::GET_EDIT_DELETE_TASK.replace("{task_id}", NONEXISTENT_ID))
-            .set_json(&json!({"name": "updated"}))
+            .set_json(json!({"name": "updated"}))
             .insert_header(auth_header)
             .to_request(),
     )
@@ -350,7 +350,7 @@ async fn test_edit_task_wrong_user() {
                 &common::path::Paths::GET_EDIT_DELETE_TASK
                     .replace("{task_id}", &task.id.to_string()),
             )
-            .set_json(&json!({"name": "hacked"}))
+            .set_json(json!({"name": "hacked"}))
             .insert_header((
                 header::AUTHORIZATION,
                 format!("Bearer {}", other_tokens.access),

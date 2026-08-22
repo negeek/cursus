@@ -8,12 +8,13 @@ pub enum TokenType {
     Access,
     Refresh,
 }
-impl TokenType {
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Access => String::from("access"),
-            Self::Refresh => String::from("refresh"),
-        }
+impl std::fmt::Display for TokenType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Self::Access => "access",
+            Self::Refresh => "refresh",
+        };
+        f.write_str(name)
     }
 }
 
@@ -61,7 +62,7 @@ fn expiry_in_days(days: i64) -> usize {
 impl TokenCodec {
     /// Gives a default codec
     pub fn new(subject: String) -> Self {
-        return TokenCodec {
+        TokenCodec {
             alg: Algorithm::HS256,
             secret: TokenCodec::secret(),
             access_expiry: expiry_in_days(1),
@@ -69,8 +70,8 @@ impl TokenCodec {
             issue_at: jiff::Timestamp::now().as_second() as usize,
             issuer: TokenCodec::issuer(),
             audience: TokenCodec::audience(),
-            subject: subject,
-        };
+            subject,
+        }
     }
 
     pub fn secret() -> String {
@@ -104,7 +105,7 @@ impl TokenCodec {
             &claims,
             &EncodingKey::from_secret(self.secret.as_ref()),
         )?;
-        return Ok(token);
+        Ok(token)
     }
 
     /// Generates access and refresh token
@@ -112,10 +113,10 @@ impl TokenCodec {
     pub fn generate(&self) -> Result<Token, Error> {
         let access_token = self.generate_token(TokenType::Access)?;
         let refresh_token = self.generate_token(TokenType::Refresh)?;
-        return Ok(Token {
+        Ok(Token {
             access: access_token,
             refresh: refresh_token,
-        });
+        })
     }
 
     pub fn validate(token: &str) -> Result<Claims, Error> {

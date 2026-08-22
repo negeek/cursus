@@ -103,7 +103,7 @@ pub async fn logout(
 ) -> Result<impl Responder> {
     let mut db = state.db.clone();
     let user_service = UserService::new();
-    let _ = user_service
+    user_service
         .logout(&mut db, body.into_inner(), user.into_inner())
         .await?;
     Ok(web::Json(LogoutResponse { success: true }))
@@ -129,7 +129,5 @@ pub async fn refresh_access_token(
     let access_token = user_service
         .refresh_access_token(&mut db, &body.refresh_token)
         .await?;
-    Ok(web::Json(RefreshAccessResponse {
-        access_token: access_token,
-    }))
+    Ok(web::Json(RefreshAccessResponse { access_token }))
 }

@@ -23,10 +23,8 @@ pub async fn get_tasks(
     let mut db = state.db.clone();
     let task_service = TaskService::new();
     let tasks = task_service.get_user_tasks(&mut db, &user.id).await?;
-    let response_tasks: Vec<TaskResponse> = tasks
-        .into_iter()
-        .map(|task| TaskResponse::from_task_row(task))
-        .collect();
+    let response_tasks: Vec<TaskResponse> =
+        tasks.into_iter().map(TaskResponse::from_task_row).collect();
     Ok(web::Json(response_tasks))
 }
 
@@ -142,7 +140,7 @@ pub async fn delete_task(
     let mut db = state.db.clone();
     let task_id = path.into_inner().0;
     let user_service = TaskService::new();
-    let _ = user_service
+    user_service
         .delete_task(&mut db, &user.id, &task_id)
         .await?;
     Ok(web::Json(DeleteTaskResponse {

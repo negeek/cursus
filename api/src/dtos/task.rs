@@ -78,8 +78,8 @@ impl TaskResponse {
             description: task.description,
             endpoint: task.endpoint,
             method: task.method,
-            body: body,
-            result_schema: result_schema,
+            body,
+            result_schema,
             date_created: task.date_created.to_string(),
             date_updated: task.date_updated.to_string(),
         }

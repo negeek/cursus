@@ -5,6 +5,10 @@ pub mod user_verify;
 pub mod workflow;
 pub mod workflow_state;
 pub mod workflow_task;
+// The generated accessors for `from_task` and `from_task_id` look like broken
+// constructors to clippy. The names are the domain's, saying which end of the
+// edge each field is, so the lint is silenced rather than the fields renamed.
+#[allow(clippy::wrong_self_convention)]
 pub mod workflow_task_edge;
 pub mod workflow_task_state;
 
