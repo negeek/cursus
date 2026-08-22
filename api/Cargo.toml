@@ -23,6 +23,7 @@ utoipa-swagger-ui = { workspace = true }
 # failure. Toasty surfaces the driver error underneath, so recognising the
 # Postgres SQLSTATE means downcasting to the driver's own error type.
 tokio-postgres = { workspace = true }
+thiserror = { workspace = true }
 
 # Generating migration files is a development action, not something the server
 # does, so the CLI and its argument parsing stay behind a feature flag and never

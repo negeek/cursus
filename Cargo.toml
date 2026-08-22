@@ -30,6 +30,7 @@ utoipa-swagger-ui = { version = "8", features = ["actix-web"] }
 tokio-postgres = "0.7"
 url = "2"
 anyhow = "1"
+thiserror = "2"
 
 [dependencies]
 api = { path = "api" }

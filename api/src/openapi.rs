@@ -1,4 +1,4 @@
-use crate::dto::{
+use crate::dtos::{
     error::ApiError,
     task::{
         CreateTaskRequest, DeleteTaskResponse, EditTaskRequest, TaskBody, TaskResponse,
@@ -20,7 +20,7 @@ use crate::dto::{
         DeleteWorkflowTaskEdgeResponse, WorkflowTaskEdgeRequest, WorkflowTaskEdgeResponse,
     },
 };
-use crate::handler::{task, user, workflow, workflow_task, workflow_task_edge};
+use crate::handlers::{task, user, workflow, workflow_task, workflow_task_edge};
 use utoipa::{
     OpenApi,
     openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},

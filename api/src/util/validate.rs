@@ -1,4 +1,4 @@
-use crate::dto::error::ValidationError;
+use crate::dtos::error::ValidationError;
 
 pub fn validate_url(url: &str, field_name: Option<&str>) -> Result<(), ValidationError> {
     // Basic validation for URL format. Not RFC compliant but serves as a simple check.

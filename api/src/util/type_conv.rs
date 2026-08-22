@@ -10,11 +10,20 @@ pub fn value_to_json<T: serde::de::DeserializeOwned>(
     value.map(|v| serde_json::from_value(v)).transpose()
 }
 
+/// Parses an RFC 3339 timestamp into the shape the timestamp columns use.
+///
+/// The input carries an offset, the column does not, so the instant is
+/// normalised to UTC before the offset is dropped. Storing the wall clock time
+/// as written would otherwise silently shift anything sent from a non UTC
+/// offset.
 pub fn option_string_to_option_datetime(
     input: Option<String>,
-) -> Result<Option<chrono::DateTime<chrono::Utc>>, chrono::ParseError> {
+) -> Result<Option<jiff::civil::DateTime>, jiff::Error> {
     input
-        .map(|s| s.parse::<chrono::DateTime<chrono::Utc>>())
+        .map(|s| {
+            s.parse::<jiff::Timestamp>()
+                .map(|ts| ts.to_zoned(jiff::tz::TimeZone::UTC).datetime())
+        })
         .transpose()
 }
 
