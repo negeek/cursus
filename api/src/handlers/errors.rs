@@ -61,10 +61,11 @@ impl ResponseError for UserServiceError {
             // Everything an unauthenticated caller can trigger by guessing
             // answers with 401 and the same shape, so nothing here helps
             // distinguish a real account from a fake one.
-            InvalidCredentials | InvalidVerificationCode | VerificationCodeExpired
-            | MalformedToken | RejectedToken => {
-                client_error(StatusCode::UNAUTHORIZED, self.to_string())
-            }
+            InvalidCredentials
+            | InvalidVerificationCode
+            | VerificationCodeExpired
+            | MalformedToken
+            | RejectedToken => client_error(StatusCode::UNAUTHORIZED, self.to_string()),
 
             EmailNotVerified => client_error(StatusCode::FORBIDDEN, self.to_string()),
             UserNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
@@ -81,7 +82,9 @@ impl ResponseError for WorkflowServiceError {
     fn error_response(&self) -> HttpResponse {
         use WorkflowServiceError::*;
         match self {
-            WorkflowNotFound | TaskNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
+            WorkflowNotFound | TaskNotFound => {
+                client_error(StatusCode::NOT_FOUND, self.to_string())
+            }
             NotWorkflowOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
             InvalidWorkflowId(_)
             | InvalidUserId(_)
@@ -101,7 +104,9 @@ impl ResponseError for WorkflowTaskServiceError {
             WorkflowTaskNotFound | WorkflowNotFound | TaskNotFound => {
                 client_error(StatusCode::NOT_FOUND, self.to_string())
             }
-            NotWorkflowOwner | NotTaskOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
+            NotWorkflowOwner | NotTaskOwner => {
+                client_error(StatusCode::FORBIDDEN, self.to_string())
+            }
             DuplicateStepName(_) => client_error(StatusCode::CONFLICT, self.to_string()),
             InvalidId(_) | InvalidJsonField { .. } | NegativeRetryConfiguration => {
                 client_error(StatusCode::BAD_REQUEST, self.to_string())

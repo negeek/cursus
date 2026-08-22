@@ -1,5 +1,6 @@
 use crate::{
-    db::repository::{RepositoryTrait, token::BlacklistTokenRepository, user::UserRepository},
+    repositories::{token::BlacklistTokenRepository, user::UserRepository},
+    state::AppState,
     util::token::{TokenCodec, TokenType},
 };
 use actix_web::{
@@ -9,9 +10,8 @@ use actix_web::{
 };
 
 use core::fmt;
-use futures_util::future::LocalBoxFuture;
-use sea_orm::DatabaseConnection;
 use std::future::{Ready, ready};
+use std::pin::Pin;
 
 use crate::dtos::error::ApiError;
 use actix_web::{HttpResponse, ResponseError};
@@ -89,7 +89,7 @@ where
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>>>>;
 
     forward_ready!(service);
 
@@ -118,24 +118,27 @@ where
                 return Err(AuthError::InvalidToken.into());
             }
 
-            // db connection
-            let db = req
-                .app_data::<web::Data<DatabaseConnection>>()
-                .ok_or(AuthError::Unauthorised)?;
+            // Toasty needs an owned, mutable handle, so take a clone of the
+            // pooled one rather than borrowing out of the shared state.
+            let mut db = req
+                .app_data::<web::Data<AppState>>()
+                .ok_or(AuthError::Unauthorised)?
+                .db
+                .clone();
 
-            // Ensure token is not blacklisted
-            let token_exists = BlacklistTokenRepository {}
-                .jti_exists(db.get_ref(), &claims.jti)
+            // A token that has been revoked is no longer usable even though it
+            // is still within its lifetime and still verifies.
+            if BlacklistTokenRepository
+                .is_blacklisted(&mut db, &claims.jti)
                 .await
-                .map_err(|_| AuthError::Unauthorised)?;
-            if token_exists {
+                .map_err(|_| AuthError::Unauthorised)?
+            {
                 return Err(AuthError::InvalidToken.into());
             }
 
-            // look up user in DB
             let id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| AuthError::InvalidToken)?;
-            let user = UserRepository {}
-                .find_by_uuid(db.get_ref(), &id)
+            let user = UserRepository
+                .find_by_id(&mut db, id)
                 .await
                 .map_err(|_| AuthError::Unauthorised)?
                 .ok_or(AuthError::Unauthorised)?;

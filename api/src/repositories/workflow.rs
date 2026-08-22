@@ -76,7 +76,9 @@ impl WorkflowRepository {
         workflow: &mut Workflow,
         params: UpdateWorkflowParams,
     ) -> Result<(), toasty::Error> {
-        let mut stmt = toasty::update!(workflow { date_updated: now() });
+        let mut stmt = toasty::update!(workflow {
+            date_updated: now()
+        });
         if let Some(name) = params.name {
             stmt = stmt.name(name);
         }

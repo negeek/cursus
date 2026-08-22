@@ -4,9 +4,9 @@ use crate::dtos::workflow_task::{
     WorkflowTaskResponse,
 };
 use crate::middlewares::user::AuthUser;
+use crate::state::AppState;
 use crate::{dtos::RequestValidateTrait, services::workflow_task::WorkflowTaskService};
 use actix_web::{Responder, Result, delete, get, http::StatusCode, patch, post, web};
-use crate::state::AppState;
 
 #[utoipa::path(
     post,
@@ -36,7 +36,7 @@ pub async fn create_workflow_task(
     let _ = &body.validate()?;
     let service = WorkflowTaskService::new();
     let task = service
-        .create_workflow_task(&mut db, user.id.clone(), workflow_id, body.into_inner())
+        .create_workflow_task(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
     Ok((
         web::Json(WorkflowTaskResponse::from_workflow_task_row(task)),
@@ -70,7 +70,7 @@ pub async fn get_workflow_task(
     let (workflow_id, workflow_task_id) = path.into_inner();
     let service = WorkflowTaskService::new();
     let task = service
-        .get_workflow_task(&mut db, user.id.clone(), workflow_id, workflow_task_id)
+        .get_workflow_task(&mut db, &user.id, &workflow_id, &workflow_task_id)
         .await?;
     Ok(web::Json(WorkflowTaskResponse::from_workflow_task_row(
         task,
@@ -109,9 +109,9 @@ pub async fn edit_workflow_task(
     let task = service
         .edit_workflow_task(
             &mut db,
-            user.id.clone(),
-            workflow_id,
-            workflow_task_id,
+            &user.id,
+            &workflow_id,
+            &workflow_task_id,
             body.into_inner(),
         )
         .await?;
@@ -146,7 +146,7 @@ pub async fn delete_workflow_task(
     let (workflow_id, workflow_task_id) = path.into_inner();
     let service = WorkflowTaskService::new();
     service
-        .delete_workflow_task(&mut db, user.id.clone(), workflow_id, workflow_task_id)
+        .delete_workflow_task(&mut db, &user.id, &workflow_id, &workflow_task_id)
         .await?;
     Ok(web::Json(DeleteWorkflowTaskResponse {
         message: "Workflow task deleted successfully".to_string(),

@@ -50,7 +50,10 @@ impl TaskRepository {
         db: &mut toasty::Db,
         id: Uuid,
     ) -> Result<Option<Task>, toasty::Error> {
-        Task::filter(Task::fields().id().eq(id)).first().exec(db).await
+        Task::filter(Task::fields().id().eq(id))
+            .first()
+            .exec(db)
+            .await
     }
 
     pub async fn find_by_user_id(
@@ -58,7 +61,9 @@ impl TaskRepository {
         db: &mut toasty::Db,
         user_id: Uuid,
     ) -> Result<Vec<Task>, toasty::Error> {
-        Task::filter(Task::fields().user_id().eq(user_id)).exec(db).await
+        Task::filter(Task::fields().user_id().eq(user_id))
+            .exec(db)
+            .await
     }
 
     pub async fn update(
@@ -67,7 +72,9 @@ impl TaskRepository {
         task: &mut Task,
         params: UpdateTaskParams,
     ) -> Result<(), toasty::Error> {
-        let mut stmt = toasty::update!(task { date_updated: now() });
+        let mut stmt = toasty::update!(task {
+            date_updated: now()
+        });
         if let Some(name) = params.name {
             stmt = stmt.name(name);
         }
@@ -87,6 +94,9 @@ impl TaskRepository {
     }
 
     pub async fn delete(&self, db: &mut toasty::Db, id: Uuid) -> Result<(), toasty::Error> {
-        Task::filter(Task::fields().id().eq(id)).delete().exec(db).await
+        Task::filter(Task::fields().id().eq(id))
+            .delete()
+            .exec(db)
+            .await
     }
 }

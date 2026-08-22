@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use crate::models::workflow::Model as WorkflowRow;
-use crate::models::workflow_task::Model as WorkflowTaskRow;
-use crate::models::workflow_task_edge::Model as WorkflowTaskEdgeRow;
 use crate::dtos::RequestValidateTrait;
 use crate::dtos::error::ValidationError;
 use crate::dtos::workflow_task::WorkflowTaskResponse;
 use crate::dtos::workflow_task_edge::WorkflowTaskEdgeResponse;
+use crate::models::Workflow as WorkflowRow;
+use crate::models::WorkflowTask as WorkflowTaskRow;
+use crate::models::WorkflowTaskEdge as WorkflowTaskEdgeRow;
 use cron::Schedule;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -182,11 +182,13 @@ impl WorkflowDetailResponse {
             name: workflow_row.name,
             description: workflow_row.description,
             run_type: workflow_row.run_type,
-            schedule_time: workflow_row.schedule_time.map(|dt| dt.to_rfc3339()),
+            schedule_time: workflow_row
+                .schedule_time
+                .map(|dt| crate::util::type_conv::datetime_to_rfc3339(dt)),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
-            date_created: workflow_row.date_created.to_rfc3339(),
-            date_updated: workflow_row.date_updated.to_rfc3339(),
+            date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),
+            date_updated: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_updated),
             tasks: tasks,
             edges: edges,
         }
@@ -218,11 +220,13 @@ impl WorkflowResponse {
             name: workflow_row.name,
             description: workflow_row.description,
             run_type: workflow_row.run_type,
-            schedule_time: workflow_row.schedule_time.map(|dt| dt.to_rfc3339()),
+            schedule_time: workflow_row
+                .schedule_time
+                .map(|dt| crate::util::type_conv::datetime_to_rfc3339(dt)),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
-            date_created: workflow_row.date_created.to_rfc3339(),
-            date_updated: workflow_row.date_updated.to_rfc3339(),
+            date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),
+            date_updated: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_updated),
         }
     }
 }

@@ -1,5 +1,5 @@
-use crate::models::task::Model as TaskRow;
 use crate::dtos::error::ValidationError;
+use crate::models::Task as TaskRow;
 use crate::util::type_conv::value_to_json;
 use crate::{dtos::RequestValidateTrait, util::validate::validate_url};
 use serde::{Deserialize, Serialize};
@@ -66,8 +66,12 @@ pub struct TaskResponse {
 
 impl TaskResponse {
     pub fn from_task_row(task: TaskRow) -> Self {
-        let result_schema = value_to_json(task.result_schema).unwrap_or(None);
-        let body = value_to_json(task.body).unwrap_or(None);
+        let result_schema = value_to_json(crate::util::type_conv::json_column_to_value(
+            task.result_schema,
+        ))
+        .unwrap_or(None);
+        let body =
+            value_to_json(crate::util::type_conv::json_column_to_value(task.body)).unwrap_or(None);
         TaskResponse {
             id: task.id.to_string(),
             name: task.name,

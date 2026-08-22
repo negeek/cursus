@@ -1,9 +1,9 @@
 use crate::dtos::error::ApiError;
 use crate::dtos::task::{CreateTaskRequest, DeleteTaskResponse, EditTaskRequest, TaskResponse};
 use crate::middlewares::user::AuthUser;
+use crate::state::AppState;
 use crate::{dtos::RequestValidateTrait, services::task::TaskService};
 use actix_web::{Responder, Result, delete, get, http::StatusCode, patch, post, web};
-use crate::state::AppState;
 
 #[utoipa::path(
     get,
@@ -52,7 +52,7 @@ pub async fn create_task(
     let _ = &body.validate()?;
     let user_service = TaskService::new();
     let task = user_service
-        .create_task(&mut db, user.id.clone(), body.into_inner())
+        .create_task(&mut db, &user.id, body.into_inner())
         .await?;
     Ok((
         web::Json(TaskResponse::from_task_row(task)),
@@ -83,7 +83,7 @@ pub async fn get_task(
     let task_id = path.into_inner().0;
     let task_service = TaskService::new();
     let task = task_service
-        .get_task_by_id(&mut db, &user.id, task_id)
+        .get_task_by_id(&mut db, &user.id, &task_id)
         .await?;
     Ok(web::Json(TaskResponse::from_task_row(task)))
 }
@@ -115,7 +115,7 @@ pub async fn edit_task(
     let _ = &body.validate()?;
     let user_service = TaskService::new();
     let task = user_service
-        .edit_task(&mut db, &user.id, task_id, body.into_inner())
+        .edit_task(&mut db, &user.id, &task_id, body.into_inner())
         .await?;
     Ok(web::Json(TaskResponse::from_task_row(task)))
 }
@@ -142,7 +142,9 @@ pub async fn delete_task(
     let mut db = state.db.clone();
     let task_id = path.into_inner().0;
     let user_service = TaskService::new();
-    let _ = user_service.delete_task(&mut db, &user.id, task_id).await?;
+    let _ = user_service
+        .delete_task(&mut db, &user.id, &task_id)
+        .await?;
     Ok(web::Json(DeleteTaskResponse {
         message: "Task deleted successfully".to_string(),
     }))

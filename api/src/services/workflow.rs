@@ -1,185 +1,187 @@
-use sea_orm::{ConnectionTrait, Set};
+use uuid::Uuid;
 
-use crate::models::workflow::{ActiveModel as WorkflowOp, Model as WorkflowRow};
-use crate::repositories::RepositoryTrait;
-use crate::repositories::workflow::WorkflowRepository;
 use crate::dtos::error::workflow::WorkflowServiceError;
 use crate::dtos::workflow::{CreateWorkflowRequest, EditWorkflowRequest, WorkflowDetailResponse};
+use crate::models::Workflow;
+use crate::repositories::workflow::{
+    CreateWorkflowParams, UpdateWorkflowParams, WorkflowRepository,
+};
+use crate::repositories::workflow_task::WorkflowTaskRepository;
+use crate::repositories::workflow_task_edge::WorkflowTaskEdgeRepository;
 use crate::util::type_conv::option_string_to_option_datetime;
 
 pub struct WorkflowService {
-    workflow_repository: WorkflowRepository,
+    workflows: WorkflowRepository,
+    workflow_tasks: WorkflowTaskRepository,
+    edges: WorkflowTaskEdgeRepository,
+}
+
+impl Default for WorkflowService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorkflowService {
     pub fn new() -> Self {
         Self {
-            workflow_repository: WorkflowRepository {},
+            workflows: WorkflowRepository,
+            workflow_tasks: WorkflowTaskRepository,
+            edges: WorkflowTaskEdgeRepository,
         }
     }
 
-    pub async fn create_workflow(
+    /// Loads a workflow and confirms the caller owns it.
+    ///
+    /// A workflow belonging to someone else answers "not found" rather than
+    /// "forbidden", so ids cannot be probed for existence.
+    async fn owned_workflow(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: String,
-        workflow_req: CreateWorkflowRequest,
-    ) -> Result<WorkflowRow, WorkflowServiceError> {
-        let user_id =
-            uuid::Uuid::parse_str(&user_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let schedule_time = option_string_to_option_datetime(workflow_req.schedule_time)
-            .map_err(|_| WorkflowServiceError::ServiceError)?;
-        let workflow_data = WorkflowOp {
-            id: Default::default(),
-            user_id: Set(user_id),
-            name: Set(workflow_req.name),
-            description: Set(workflow_req.description),
-            run_type: Set(workflow_req.run_type),
-            schedule_time: Set(schedule_time),
-            cron_expression: Set(workflow_req.cron_expression),
-            ..Default::default()
-        };
-        let created_workflow = self.workflow_repository.create(db, workflow_data).await?;
-        Ok(created_workflow)
-    }
-
-    pub async fn edit_workflow(
-        &self,
-        db: &impl ConnectionTrait,
-        user_id: &String,
-        workflow_id: String,
-        workflow_req: EditWorkflowRequest,
-    ) -> Result<WorkflowRow, WorkflowServiceError> {
-        let workflow_id =
-            uuid::Uuid::parse_str(&workflow_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
+        db: &mut toasty::Db,
+        user_id: Uuid,
+        workflow_id: Uuid,
+    ) -> Result<Workflow, WorkflowServiceError> {
+        let workflow = self
+            .workflows
+            .find_by_id(db, workflow_id)
             .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != *user_id {
-            return Err(WorkflowServiceError::Unauthorized);
-        }
-        let mut existing_workflow_op: WorkflowOp = existing_workflow.into();
-        if workflow_req.name.is_some() {
-            existing_workflow_op.name = Set(workflow_req.name.unwrap());
-        }
-        if workflow_req.description.is_some() {
-            existing_workflow_op.description = Set(workflow_req.description);
-        }
-        if workflow_req.run_type.is_some() {
-            existing_workflow_op.run_type = Set(workflow_req.run_type.unwrap());
-        }
-        if workflow_req.schedule_time.is_some() {
-            existing_workflow_op.schedule_time =
-                Set(option_string_to_option_datetime(workflow_req.schedule_time)
-                    .map_err(|_| WorkflowServiceError::ServiceError)?);
-        }
-        if workflow_req.cron_expression.is_some() {
-            existing_workflow_op.cron_expression = Set(workflow_req.cron_expression);
-        }
-        if workflow_req.is_active.is_some() {
-            existing_workflow_op.is_active = Set(workflow_req.is_active.unwrap());
-        }
-        let updated_workflow = self
-            .workflow_repository
-            .update(db, existing_workflow_op)
-            .await?;
-        Ok(updated_workflow)
-    }
+            .ok_or(WorkflowServiceError::WorkflowNotFound)?;
 
-    pub async fn get_workflow_by_id(
-        &self,
-        db: &impl ConnectionTrait,
-        user_id: &String,
-        workflow_id: String,
-    ) -> Result<WorkflowRow, WorkflowServiceError> {
-        let workflow_id =
-            uuid::Uuid::parse_str(&workflow_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowServiceError::WorkflowNotFound),
-        };
-        if workflow.user_id.to_string() != *user_id {
-            return Err(WorkflowServiceError::Unauthorized);
+        if workflow.user_id != user_id {
+            return Err(WorkflowServiceError::NotWorkflowOwner);
         }
         Ok(workflow)
     }
 
-    /// Full detail of workflow with tasks and edges for a given workflow id
+    pub async fn create_workflow(
+        &self,
+        db: &mut toasty::Db,
+        user_id: &str,
+        request: CreateWorkflowRequest,
+    ) -> Result<Workflow, WorkflowServiceError> {
+        let user_id = parse_user_id(user_id)?;
+        let schedule_time = option_string_to_option_datetime(request.schedule_time)
+            .map_err(|_| WorkflowServiceError::InvalidScheduleTime)?;
+
+        let workflow = self
+            .workflows
+            .create(
+                db,
+                CreateWorkflowParams {
+                    user_id,
+                    name: request.name,
+                    description: request.description,
+                    run_type: request.run_type,
+                    schedule_time,
+                    cron_expression: request.cron_expression,
+                    // Working out when a cron workflow next fires belongs to
+                    // whatever schedules runs, not to creating the record.
+                    cron_next_run: None,
+                },
+            )
+            .await?;
+        Ok(workflow)
+    }
+
+    pub async fn edit_workflow(
+        &self,
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+        request: EditWorkflowRequest,
+    ) -> Result<Workflow, WorkflowServiceError> {
+        let user_id = parse_user_id(user_id)?;
+        let workflow_id = parse_workflow_id(workflow_id)?;
+
+        let mut workflow = self.owned_workflow(db, user_id, workflow_id).await?;
+
+        let schedule_time = option_string_to_option_datetime(request.schedule_time)
+            .map_err(|_| WorkflowServiceError::InvalidScheduleTime)?;
+
+        self.workflows
+            .update(
+                db,
+                &mut workflow,
+                UpdateWorkflowParams {
+                    name: request.name,
+                    description: request.description,
+                    run_type: request.run_type,
+                    schedule_time,
+                    cron_expression: request.cron_expression,
+                    cron_next_run: None,
+                    is_active: request.is_active,
+                },
+            )
+            .await?;
+
+        Ok(workflow)
+    }
+
+    pub async fn get_workflow_by_id(
+        &self,
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+    ) -> Result<Workflow, WorkflowServiceError> {
+        let user_id = parse_user_id(user_id)?;
+        let workflow_id = parse_workflow_id(workflow_id)?;
+        self.owned_workflow(db, user_id, workflow_id).await
+    }
+
+    /// A workflow together with its steps and the edges between them, which is
+    /// the whole graph.
     pub async fn workflow_detail(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: &String,
-        workflow_id: String,
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
     ) -> Result<WorkflowDetailResponse, WorkflowServiceError> {
-        let workflow_id =
-            uuid::Uuid::parse_str(&workflow_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowServiceError::WorkflowNotFound),
-        };
-        if workflow.user_id.to_string() != *user_id {
-            return Err(WorkflowServiceError::Unauthorized);
-        }
-        let workflow_tasks_edges = self
-            .workflow_repository
-            .load_tasks_and_edges(db, workflow)
+        let user_id = parse_user_id(user_id)?;
+        let workflow_id = parse_workflow_id(workflow_id)?;
+
+        let workflow = self.owned_workflow(db, user_id, workflow_id).await?;
+        let tasks = self
+            .workflow_tasks
+            .find_by_workflow_id(db, workflow_id)
             .await?;
+        let edges = self.edges.find_by_workflow_id(db, workflow_id).await?;
+
         Ok(WorkflowDetailResponse::from_workflow_row(
-            workflow_tasks_edges.0,
-            workflow_tasks_edges.1,
-            workflow_tasks_edges.2,
+            workflow, tasks, edges,
         ))
     }
 
     pub async fn delete_workflow(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: &String,
-        workflow_id: String,
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
     ) -> Result<(), WorkflowServiceError> {
-        let workflow_id =
-            uuid::Uuid::parse_str(&workflow_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != *user_id {
-            return Err(WorkflowServiceError::Unauthorized);
-        }
-        let existing_workflow_op: WorkflowOp = existing_workflow.into();
-        self.workflow_repository
-            .delete(db, existing_workflow_op)
-            .await?;
+        let user_id = parse_user_id(user_id)?;
+        let workflow_id = parse_workflow_id(workflow_id)?;
+
+        self.owned_workflow(db, user_id, workflow_id).await?;
+
+        // The workflow's steps, edges, and run history go with it, because those
+        // relations are declared on the model.
+        self.workflows.delete(db, workflow_id).await?;
         Ok(())
     }
 
     pub async fn list_workflows(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: &String,
-    ) -> Result<Vec<WorkflowRow>, WorkflowServiceError> {
-        let user_id =
-            uuid::Uuid::parse_str(&user_id).map_err(|_| WorkflowServiceError::ServiceError)?;
-        let workflows = self
-            .workflow_repository
-            .find_by_user_id(db, &user_id)
-            .await?;
-        Ok(workflows)
+        db: &mut toasty::Db,
+        user_id: &str,
+    ) -> Result<Vec<Workflow>, WorkflowServiceError> {
+        let user_id = parse_user_id(user_id)?;
+        Ok(self.workflows.find_by_user_id(db, user_id).await?)
     }
+}
+
+fn parse_user_id(value: &str) -> Result<Uuid, WorkflowServiceError> {
+    Uuid::parse_str(value).map_err(|_| WorkflowServiceError::InvalidUserId(value.to_string()))
+}
+
+fn parse_workflow_id(value: &str) -> Result<Uuid, WorkflowServiceError> {
+    Uuid::parse_str(value).map_err(|_| WorkflowServiceError::InvalidWorkflowId(value.to_string()))
 }

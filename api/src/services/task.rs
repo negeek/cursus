@@ -55,13 +55,13 @@ impl TaskService {
     ) -> Result<Task, TaskServiceError> {
         let user_id = parse_user_id(user_id)?;
 
-        let result_schema = json_to_value(request.result_schema)
-            .map_err(|_| TaskServiceError::InvalidJsonField {
+        let result_schema = json_to_value(request.result_schema).map_err(|_| {
+            TaskServiceError::InvalidJsonField {
                 field: "result_schema",
-            })?;
-        let body = json_to_value(request.body).map_err(|_| TaskServiceError::InvalidJsonField {
-            field: "body",
+            }
         })?;
+        let body = json_to_value(request.body)
+            .map_err(|_| TaskServiceError::InvalidJsonField { field: "body" })?;
 
         let task = self
             .tasks
@@ -92,13 +92,13 @@ impl TaskService {
 
         let mut task = self.owned_task(db, user_id, task_id).await?;
 
-        let result_schema = json_to_value(request.result_schema)
-            .map_err(|_| TaskServiceError::InvalidJsonField {
+        let result_schema = json_to_value(request.result_schema).map_err(|_| {
+            TaskServiceError::InvalidJsonField {
                 field: "result_schema",
-            })?;
-        let body = json_to_value(request.body).map_err(|_| TaskServiceError::InvalidJsonField {
-            field: "body",
+            }
         })?;
+        let body = json_to_value(request.body)
+            .map_err(|_| TaskServiceError::InvalidJsonField { field: "body" })?;
 
         self.tasks
             .update(

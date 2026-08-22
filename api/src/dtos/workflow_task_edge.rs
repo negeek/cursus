@@ -1,6 +1,6 @@
-use crate::models::workflow_task_edge::Model as WorkflowTaskEdgeRow;
 use crate::dtos::RequestValidateTrait;
 use crate::dtos::error::ValidationError;
+use crate::models::WorkflowTaskEdge as WorkflowTaskEdgeRow;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

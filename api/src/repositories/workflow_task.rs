@@ -61,6 +61,46 @@ impl WorkflowTaskRepository {
             .await
     }
 
+    /// A step, but only if it belongs to the workflow given.
+    ///
+    /// Scoping the lookup rather than fetching by id and comparing afterwards
+    /// means a step from another workflow simply is not found, which is what
+    /// callers want when validating that an edge stays inside one graph.
+    pub async fn find_in_workflow(
+        &self,
+        db: &mut toasty::Db,
+        workflow_id: Uuid,
+        id: Uuid,
+    ) -> Result<Option<WorkflowTask>, toasty::Error> {
+        WorkflowTask::filter(
+            WorkflowTask::fields()
+                .id()
+                .eq(id)
+                .and(WorkflowTask::fields().workflow_id().eq(workflow_id)),
+        )
+        .first()
+        .exec(db)
+        .await
+    }
+
+    /// Whether a step name is already taken within a workflow.
+    pub async fn find_by_step_name(
+        &self,
+        db: &mut toasty::Db,
+        workflow_id: Uuid,
+        step_name: &str,
+    ) -> Result<Option<WorkflowTask>, toasty::Error> {
+        WorkflowTask::filter(
+            WorkflowTask::fields()
+                .workflow_id()
+                .eq(workflow_id)
+                .and(WorkflowTask::fields().step_name().eq(step_name)),
+        )
+        .first()
+        .exec(db)
+        .await
+    }
+
     /// Every step in a workflow. This is what the runner loads before walking
     /// the graph.
     pub async fn find_by_workflow_id(
@@ -79,7 +119,9 @@ impl WorkflowTaskRepository {
         workflow_task: &mut WorkflowTask,
         params: UpdateWorkflowTaskParams,
     ) -> Result<(), toasty::Error> {
-        let mut stmt = toasty::update!(workflow_task { date_updated: now() });
+        let mut stmt = toasty::update!(workflow_task {
+            date_updated: now()
+        });
         if let Some(step_name) = params.step_name {
             stmt = stmt.step_name(step_name);
         }

@@ -3,9 +3,9 @@ use crate::dtos::workflow_task_edge::{
     DeleteWorkflowTaskEdgeResponse, WorkflowTaskEdgeRequest, WorkflowTaskEdgeResponse,
 };
 use crate::middlewares::user::AuthUser;
+use crate::state::AppState;
 use crate::{dtos::RequestValidateTrait, services::workflow_task_edge::WorkflowTaskEdgeService};
 use actix_web::{Responder, Result, delete, http::StatusCode, patch, post, web};
-use crate::state::AppState;
 
 #[utoipa::path(
     post,
@@ -35,7 +35,7 @@ pub async fn create_workflow_task_edge(
     let _ = &body.validate()?;
     let service = WorkflowTaskEdgeService::new();
     let edge = service
-        .create_workflow_task_edge(&mut db, user.id.clone(), workflow_id, body.into_inner())
+        .create_workflow_task_edge(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
     Ok((
         web::Json(WorkflowTaskEdgeResponse::from_workflow_task_edge_row(edge)),
@@ -74,13 +74,7 @@ pub async fn edit_workflow_task_edge(
     let _ = &body.validate()?;
     let service = WorkflowTaskEdgeService::new();
     let edge = service
-        .edit_workflow_task_edge(
-            &mut db,
-            user.id.clone(),
-            workflow_id,
-            edge_id,
-            body.into_inner(),
-        )
+        .edit_workflow_task_edge(&mut db, &user.id, &workflow_id, &edge_id, body.into_inner())
         .await?;
     Ok(web::Json(
         WorkflowTaskEdgeResponse::from_workflow_task_edge_row(edge),
@@ -113,7 +107,7 @@ pub async fn delete_workflow_task_edge(
     let (workflow_id, edge_id) = path.into_inner();
     let service = WorkflowTaskEdgeService::new();
     service
-        .delete_workflow_task_edge(&mut db, user.id.clone(), workflow_id, edge_id)
+        .delete_workflow_task_edge(&mut db, &user.id, &workflow_id, &edge_id)
         .await?;
     Ok(web::Json(DeleteWorkflowTaskEdgeResponse {
         message: "Edge deleted successfully".to_string(),

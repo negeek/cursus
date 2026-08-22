@@ -62,9 +62,8 @@ impl ApplicationConfiguration {
     /// default and must be provided.
     pub fn from_env() -> Result<Self, std::io::Error> {
         let defaults = Self::default();
-        let database_url = std::env::var("DATABASE_URL").map_err(|_| {
-            std::io::Error::other("DATABASE_URL must be set")
-        })?;
+        let database_url = std::env::var("DATABASE_URL")
+            .map_err(|_| std::io::Error::other("DATABASE_URL must be set"))?;
 
         Ok(Self {
             database_url,

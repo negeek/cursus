@@ -4,9 +4,9 @@ use crate::dtos::workflow::{
     WorkflowResponse,
 };
 use crate::middlewares::user::AuthUser;
+use crate::state::AppState;
 use crate::{dtos::RequestValidateTrait, services::workflow::WorkflowService};
 use actix_web::{Responder, Result, delete, get, http::StatusCode, patch, post, web};
-use crate::state::AppState;
 
 #[utoipa::path(
     get,
@@ -55,7 +55,7 @@ pub async fn create_workflow(
     let _ = &body.validate()?;
     let workflow_service = WorkflowService::new();
     let workflow = workflow_service
-        .create_workflow(&mut db, user.id.clone(), body.into_inner())
+        .create_workflow(&mut db, &user.id, body.into_inner())
         .await?;
     Ok((
         web::Json(WorkflowResponse::from_workflow_row(workflow)),
@@ -86,7 +86,7 @@ pub async fn get_workflow(
     let workflow_id = path.into_inner().0;
     let workflow_service = WorkflowService::new();
     let workflow = workflow_service
-        .get_workflow_by_id(&mut db, &user.id, workflow_id)
+        .get_workflow_by_id(&mut db, &user.id, &workflow_id)
         .await?;
     Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
 }
@@ -114,7 +114,7 @@ pub async fn get_workflow_detail(
     let workflow_id = path.into_inner().0;
     let workflow_service = WorkflowService::new();
     let detail = workflow_service
-        .workflow_detail(&mut db, &user.id, workflow_id)
+        .workflow_detail(&mut db, &user.id, &workflow_id)
         .await?;
     Ok(web::Json(detail))
 }
@@ -146,7 +146,7 @@ pub async fn edit_workflow(
     let _ = &body.validate()?;
     let workflow_service = WorkflowService::new();
     let workflow = workflow_service
-        .edit_workflow(&mut db, &user.id, workflow_id, body.into_inner())
+        .edit_workflow(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
     Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
 }
@@ -174,7 +174,7 @@ pub async fn delete_workflow(
     let workflow_id = path.into_inner().0;
     let workflow_service = WorkflowService::new();
     workflow_service
-        .delete_workflow(&mut db, &user.id, workflow_id)
+        .delete_workflow(&mut db, &user.id, &workflow_id)
         .await?;
     Ok(web::Json(DeleteWorkflowResponse {
         message: "Workflow deleted successfully".to_string(),

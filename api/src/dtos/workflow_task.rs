@@ -1,7 +1,7 @@
-use crate::models::workflow_task::Model as WorkflowTaskRow;
 use crate::dtos::RequestValidateTrait;
 use crate::dtos::error::ValidationError;
 use crate::dtos::task::{TaskBody, TaskResultSchema};
+use crate::models::WorkflowTask as WorkflowTaskRow;
 use crate::util::type_conv::value_to_json;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -83,13 +83,17 @@ impl WorkflowTaskResponse {
             id: row.id.to_string(),
             task_id: row.task_id.to_string(),
             step_name: row.step_name,
-            task_body: value_to_json(row.task_body).unwrap_or(None),
-            task_result_schema: value_to_json(row.task_result_schema).unwrap_or(None),
+            task_body: value_to_json(crate::util::type_conv::json_column_to_value(row.task_body))
+                .unwrap_or(None),
+            task_result_schema: value_to_json(crate::util::type_conv::json_column_to_value(
+                row.task_result_schema,
+            ))
+            .unwrap_or(None),
             run_position: row.run_position,
             retry_count: row.retry_count,
             retry_delay_secs: row.retry_delay_secs,
-            date_created: row.date_created.to_rfc3339(),
-            date_updated: row.date_updated.to_rfc3339(),
+            date_created: crate::util::type_conv::datetime_to_rfc3339(row.date_created),
+            date_updated: crate::util::type_conv::datetime_to_rfc3339(row.date_updated),
         }
     }
 }

@@ -45,7 +45,10 @@ impl UserRepository {
         db: &mut toasty::Db,
         id: Uuid,
     ) -> Result<Option<User>, toasty::Error> {
-        User::filter(User::fields().id().eq(id)).first().exec(db).await
+        User::filter(User::fields().id().eq(id))
+            .first()
+            .exec(db)
+            .await
     }
 
     pub async fn find_by_email(
@@ -65,7 +68,9 @@ impl UserRepository {
         user: &mut User,
         params: UpdateUserParams,
     ) -> Result<(), toasty::Error> {
-        let mut stmt = toasty::update!(user { date_updated: now() });
+        let mut stmt = toasty::update!(user {
+            date_updated: now()
+        });
         if let Some(username) = params.username {
             stmt = stmt.username(username);
         }
@@ -84,6 +89,9 @@ impl UserRepository {
     /// Deleting a user takes their tasks, workflows, and pending verifications
     /// with it, because those relations are declared on the model.
     pub async fn delete(&self, db: &mut toasty::Db, id: Uuid) -> Result<(), toasty::Error> {
-        User::filter(User::fields().id().eq(id)).delete().exec(db).await
+        User::filter(User::fields().id().eq(id))
+            .delete()
+            .exec(db)
+            .await
     }
 }

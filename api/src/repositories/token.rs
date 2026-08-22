@@ -35,11 +35,13 @@ impl BlacklistTokenRepository {
         db: &mut toasty::Db,
         jti: &str,
     ) -> Result<bool, toasty::Error> {
-        Ok(BlacklistedToken::filter(BlacklistedToken::fields().jti().eq(jti))
-            .first()
-            .exec(db)
-            .await?
-            .is_some())
+        Ok(
+            BlacklistedToken::filter(BlacklistedToken::fields().jti().eq(jti))
+                .first()
+                .exec(db)
+                .await?
+                .is_some(),
+        )
     }
 
     /// Drops rows whose underlying token has already expired on its own. They

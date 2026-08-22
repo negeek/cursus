@@ -1,241 +1,231 @@
-use sea_orm::{ActiveModelTrait, ConnectionTrait, Set};
+use uuid::Uuid;
 
-use crate::models::workflow_task::{ActiveModel as WorkflowTaskOp, Model as WorkflowTaskRow};
-use crate::repositories::RepositoryTrait;
+use crate::dtos::error::workflow_task::WorkflowTaskServiceError as Error;
+use crate::dtos::workflow_task::{CreateWorkflowTaskRequest, EditWorkflowTaskRequest};
+use crate::models::WorkflowTask;
+use crate::repositories::is_unique_violation;
 use crate::repositories::task::TaskRepository;
 use crate::repositories::workflow::WorkflowRepository;
-use crate::repositories::workflow_task::WorkflowTaskRepository;
-use crate::dtos::error::workflow_task::WorkflowTaskServiceError;
-use crate::dtos::workflow_task::{CreateWorkflowTaskRequest, EditWorkflowTaskRequest};
+use crate::repositories::workflow_task::{
+    CreateWorkflowTaskParams, UpdateWorkflowTaskParams, WorkflowTaskRepository,
+};
+use crate::repositories::workflow_task_edge::WorkflowTaskEdgeRepository;
 use crate::util::type_conv::{json_to_value, option_u32_to_option_i32};
 
 pub struct WorkflowTaskService {
-    workflow_repository: WorkflowRepository,
-    workflow_task_repository: WorkflowTaskRepository,
-    task_repository: TaskRepository,
+    workflows: WorkflowRepository,
+    workflow_tasks: WorkflowTaskRepository,
+    tasks: TaskRepository,
+    edges: WorkflowTaskEdgeRepository,
+}
+
+impl Default for WorkflowTaskService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WorkflowTaskService {
     pub fn new() -> Self {
         Self {
-            workflow_repository: WorkflowRepository {},
-            workflow_task_repository: WorkflowTaskRepository {},
-            task_repository: TaskRepository {},
+            workflows: WorkflowRepository,
+            workflow_tasks: WorkflowTaskRepository,
+            tasks: TaskRepository,
+            edges: WorkflowTaskEdgeRepository,
         }
+    }
+
+    async fn assert_owns_workflow(
+        &self,
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: Uuid,
+    ) -> Result<(), Error> {
+        let workflow = self
+            .workflows
+            .find_by_id(db, workflow_id)
+            .await?
+            .ok_or(Error::WorkflowNotFound)?;
+
+        if workflow.user_id.to_string() != user_id {
+            return Err(Error::NotWorkflowOwner);
+        }
+        Ok(())
+    }
+
+    /// Loads a step, but only if it belongs to the workflow named.
+    async fn step_in_workflow(
+        &self,
+        db: &mut toasty::Db,
+        workflow_id: Uuid,
+        workflow_task_id: Uuid,
+    ) -> Result<WorkflowTask, Error> {
+        self.workflow_tasks
+            .find_in_workflow(db, workflow_id, workflow_task_id)
+            .await?
+            .ok_or(Error::WorkflowTaskNotFound)
     }
 
     pub async fn create_workflow_task(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: String,
-        workflow_id: String,
-        workflow_task_req: CreateWorkflowTaskRequest,
-    ) -> Result<WorkflowTaskRow, WorkflowTaskServiceError> {
-        let workflow_id = uuid::Uuid::parse_str(&workflow_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let task_id = uuid::Uuid::parse_str(&workflow_task_req.task_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        // Check if workflow exists and belongs to user
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+        request: CreateWorkflowTaskRequest,
+    ) -> Result<WorkflowTask, Error> {
+        let workflow_id = parse_id(workflow_id)?;
+        let task_id = parse_id(&request.task_id)?;
+
+        self.assert_owns_workflow(db, user_id, workflow_id).await?;
+
+        // The task being placed has to belong to the same person, otherwise a
+        // workflow could call out to someone else's endpoint.
+        let task = self
+            .tasks
+            .find_by_id(db, task_id)
             .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowTaskServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != user_id {
-            return Err(WorkflowTaskServiceError::WorkflowNotOwned);
+            .ok_or(Error::TaskNotFound)?;
+        if task.user_id.to_string() != user_id {
+            return Err(Error::NotTaskOwner);
         }
-        // Check if task exists and belongs to user
-        let existing_task = match self.task_repository.find_by_uuid(db, &task_id).await? {
-            Some(t) => t,
-            None => return Err(WorkflowTaskServiceError::TaskNotFound),
-        };
-        if existing_task.user_id.to_string() != user_id {
-            return Err(WorkflowTaskServiceError::TaskNotOwned);
-        }
-        // Check if step name is unique within the workflow
-        match self
-            .workflow_task_repository
-            .find_by_step_name(db, &workflow_id, &workflow_task_req.step_name)
+
+        if self
+            .workflow_tasks
+            .find_by_step_name(db, workflow_id, &request.step_name)
             .await?
+            .is_some()
         {
-            Some(_) => return Err(WorkflowTaskServiceError::DuplicateStepName),
-            None => (),
-        };
-        // Create workflow task
-        let retry_count = option_u32_to_option_i32(workflow_task_req.retry_count);
-        let retry_delay_secs = option_u32_to_option_i32(workflow_task_req.retry_delay_secs);
-        let result_schema = json_to_value(workflow_task_req.task_result_schema)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let task_body = json_to_value(workflow_task_req.task_body)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let workflow_task_data = WorkflowTaskOp {
-            id: Default::default(),
-            workflow_id: Set(workflow_id),
-            task_id: Set(task_id),
-            step_name: Set(workflow_task_req.step_name),
-            task_body: Set(task_body),
-            task_result_schema: Set(result_schema),
-            run_position: Set(workflow_task_req.run_position as i32),
-            retry_count: Set(retry_count),
-            retry_delay_secs: Set(retry_delay_secs),
-            ..Default::default()
-        };
-        let created_workflow_task = self
-            .workflow_task_repository
-            .create(db, workflow_task_data)
-            .await?;
-        Ok(created_workflow_task)
+            return Err(Error::DuplicateStepName(request.step_name));
+        }
+
+        let task_result_schema =
+            json_to_value(request.task_result_schema).map_err(|_| Error::InvalidJsonField {
+                field: "task_result_schema",
+            })?;
+        let task_body = json_to_value(request.task_body)
+            .map_err(|_| Error::InvalidJsonField { field: "task_body" })?;
+
+        let step_name = request.step_name.clone();
+        self.workflow_tasks
+            .create(
+                db,
+                CreateWorkflowTaskParams {
+                    workflow_id,
+                    task_id,
+                    step_name: request.step_name,
+                    task_body,
+                    task_result_schema,
+                    run_position: request.run_position as i32,
+                    retry_count: option_u32_to_option_i32(request.retry_count),
+                    retry_delay_secs: option_u32_to_option_i32(request.retry_delay_secs),
+                },
+            )
+            .await
+            .map_err(|e| {
+                // The name check above can lose a race with a concurrent create.
+                // The unique index decides, and means the same thing.
+                if is_unique_violation(&e) {
+                    Error::DuplicateStepName(step_name)
+                } else {
+                    Error::Database(e)
+                }
+            })
     }
 
     pub async fn edit_workflow_task(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: String,
-        workflow_id: String,
-        workflow_task_id: String,
-        workflow_task_req: EditWorkflowTaskRequest,
-    ) -> Result<WorkflowTaskRow, WorkflowTaskServiceError> {
-        // Similar checks as create_workflow_task for ownership and existence
-        // Then update the workflow task with new values
-        let workflow_id = uuid::Uuid::parse_str(&workflow_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let workflow_task_id = uuid::Uuid::parse_str(&workflow_task_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        // Check if workflow exists and belongs to user
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowTaskServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != user_id {
-            return Err(WorkflowTaskServiceError::WorkflowNotOwned);
-        };
-        let workflow_task = match self
-            .workflow_task_repository
-            .find_by_uuid(db, &workflow_task_id)
-            .await?
-        {
-            Some(wt) => wt,
-            None => return Err(WorkflowTaskServiceError::TaskNotFound),
-        };
-        // Check if step name is unique within the workflow if it's being updated
-        if let Some(ref step_name) = workflow_task_req.step_name {
-            match self
-                .workflow_task_repository
-                .find_by_step_name(db, &workflow_id, step_name)
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+        workflow_task_id: &str,
+        request: EditWorkflowTaskRequest,
+    ) -> Result<WorkflowTask, Error> {
+        let workflow_id = parse_id(workflow_id)?;
+        let workflow_task_id = parse_id(workflow_task_id)?;
+
+        self.assert_owns_workflow(db, user_id, workflow_id).await?;
+        let mut workflow_task = self
+            .step_in_workflow(db, workflow_id, workflow_task_id)
+            .await?;
+
+        // Renaming onto a name another step already holds is a conflict, but
+        // keeping the current name is not.
+        if let Some(step_name) = &request.step_name
+            && let Some(existing) = self
+                .workflow_tasks
+                .find_by_step_name(db, workflow_id, step_name)
                 .await?
-            {
-                Some(existing_task) if existing_task.id != workflow_task_id => {
-                    return Err(WorkflowTaskServiceError::DuplicateStepName);
-                }
-                _ => (),
-            };
+            && existing.id != workflow_task.id
+        {
+            return Err(Error::DuplicateStepName(step_name.clone()));
         }
-        // let's update the workflow task now
-        let mut workflow_task_op: WorkflowTaskOp = workflow_task.into();
-        if workflow_task_req.step_name.is_some() {
-            workflow_task_op.step_name = Set(workflow_task_req.step_name.unwrap());
-        }
-        if workflow_task_req.task_body.is_some() {
-            let task_body = json_to_value(workflow_task_req.task_body)
-                .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-            workflow_task_op.task_body = Set(task_body);
-        }
-        if workflow_task_req.task_result_schema.is_some() {
-            let result_schema = json_to_value(workflow_task_req.task_result_schema)
-                .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-            workflow_task_op.task_result_schema = Set(result_schema);
-        }
-        if workflow_task_req.retry_count.is_some() {
-            workflow_task_op.retry_count =
-                Set(option_u32_to_option_i32(workflow_task_req.retry_count));
-        }
-        if workflow_task_req.retry_delay_secs.is_some() {
-            workflow_task_op.retry_delay_secs =
-                Set(option_u32_to_option_i32(workflow_task_req.retry_delay_secs));
-        }
-        if workflow_task_req.run_position.is_some() {
-            workflow_task_op.run_position = Set(workflow_task_req.run_position.unwrap() as i32);
-        }
-        let updated_workflow_task = workflow_task_op.update(db).await?;
-        Ok(updated_workflow_task)
+
+        let task_result_schema =
+            json_to_value(request.task_result_schema).map_err(|_| Error::InvalidJsonField {
+                field: "task_result_schema",
+            })?;
+        let task_body = json_to_value(request.task_body)
+            .map_err(|_| Error::InvalidJsonField { field: "task_body" })?;
+
+        self.workflow_tasks
+            .update(
+                db,
+                &mut workflow_task,
+                UpdateWorkflowTaskParams {
+                    step_name: request.step_name,
+                    task_body,
+                    task_result_schema,
+                    run_position: request.run_position.map(|p| p as i32),
+                    retry_count: option_u32_to_option_i32(request.retry_count),
+                    retry_delay_secs: option_u32_to_option_i32(request.retry_delay_secs),
+                },
+            )
+            .await?;
+
+        Ok(workflow_task)
     }
 
     pub async fn get_workflow_task(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: String,
-        workflow_id: String,
-        workflow_task_id: String,
-    ) -> Result<WorkflowTaskRow, WorkflowTaskServiceError> {
-        // Implementation for retrieving a specific workflow task
-        let workflow_id = uuid::Uuid::parse_str(&workflow_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let workflow_task_id = uuid::Uuid::parse_str(&workflow_task_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowTaskServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != user_id {
-            return Err(WorkflowTaskServiceError::WorkflowNotOwned);
-        };
-        let workflow_task = match self
-            .workflow_task_repository
-            .find_by_uuid(db, &workflow_task_id)
-            .await?
-        {
-            Some(wt) => wt,
-            None => return Err(WorkflowTaskServiceError::TaskNotFound),
-        };
-        Ok(workflow_task)
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+        workflow_task_id: &str,
+    ) -> Result<WorkflowTask, Error> {
+        let workflow_id = parse_id(workflow_id)?;
+        let workflow_task_id = parse_id(workflow_task_id)?;
+
+        self.assert_owns_workflow(db, user_id, workflow_id).await?;
+        self.step_in_workflow(db, workflow_id, workflow_task_id)
+            .await
     }
 
     pub async fn delete_workflow_task(
         &self,
-        db: &impl ConnectionTrait,
-        user_id: String,
-        workflow_id: String,
-        workflow_task_id: String,
-    ) -> Result<(), WorkflowTaskServiceError> {
-        // Implementation for deleting a specific workflow task
-        let workflow_id = uuid::Uuid::parse_str(&workflow_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let workflow_task_id = uuid::Uuid::parse_str(&workflow_task_id)
-            .map_err(|_| WorkflowTaskServiceError::ServiceError)?;
-        let existing_workflow = match self
-            .workflow_repository
-            .find_by_uuid(db, &workflow_id)
-            .await?
-        {
-            Some(w) => w,
-            None => return Err(WorkflowTaskServiceError::WorkflowNotFound),
-        };
-        if existing_workflow.user_id.to_string() != user_id {
-            return Err(WorkflowTaskServiceError::WorkflowNotOwned);
-        };
-        let workflow_task = match self
-            .workflow_task_repository
-            .find_by_uuid(db, &workflow_task_id)
-            .await?
-        {
-            Some(wt) => wt,
-            None => return Err(WorkflowTaskServiceError::TaskNotFound),
-        };
-        let workflow_task_op: WorkflowTaskOp = workflow_task.into();
-        self.workflow_task_repository
-            .delete(db, workflow_task_op)
+        db: &mut toasty::Db,
+        user_id: &str,
+        workflow_id: &str,
+        workflow_task_id: &str,
+    ) -> Result<(), Error> {
+        let workflow_id = parse_id(workflow_id)?;
+        let workflow_task_id = parse_id(workflow_task_id)?;
+
+        self.assert_owns_workflow(db, user_id, workflow_id).await?;
+        self.step_in_workflow(db, workflow_id, workflow_task_id)
             .await?;
+
+        // Edges have to go first, and explicitly. WorkflowTask cannot declare
+        // has_many back to the edge table, because it would need two of them and
+        // toasty cannot tell a pair of has_many to the same target apart. So
+        // nothing cascades here, and skipping this would leave edges pointing at
+        // a step that no longer exists, which is a broken graph the runner would
+        // walk into.
+        self.edges.delete_for_task(db, workflow_task_id).await?;
+        self.workflow_tasks.delete(db, workflow_task_id).await?;
         Ok(())
     }
+}
+
+fn parse_id(value: &str) -> Result<Uuid, Error> {
+    Uuid::parse_str(value).map_err(|_| Error::InvalidId(value.to_string()))
 }

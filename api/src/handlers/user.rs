@@ -6,8 +6,8 @@ use crate::dtos::user::{
 };
 use crate::middlewares::user::AuthUser;
 use crate::services::user::UserService;
-use actix_web::{Responder, Result, post, web};
 use crate::state::AppState;
+use actix_web::{Responder, Result, post, web};
 
 #[utoipa::path(
     post,

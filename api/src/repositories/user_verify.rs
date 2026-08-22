@@ -29,15 +29,28 @@ impl UserVerifyRepository {
         .await
     }
 
+    /// Looks up a code, scoped to the user presenting it.
+    ///
+    /// Scoped rather than global so that knowing a code is not enough on its
+    /// own. The caller has to know whose code it is too.
+    ///
+    /// Whether the code has expired is the caller's decision. Finding the row
+    /// does not mean it may be redeemed.
     pub async fn find_by_code(
         &self,
         db: &mut toasty::Db,
         code: &str,
+        user_id: Uuid,
     ) -> Result<Option<UserVerify>, toasty::Error> {
-        UserVerify::filter(UserVerify::fields().code().eq(code))
-            .first()
-            .exec(db)
-            .await
+        UserVerify::filter(
+            UserVerify::fields()
+                .code()
+                .eq(code)
+                .and(UserVerify::fields().user_id().eq(user_id)),
+        )
+        .first()
+        .exec(db)
+        .await
     }
 
     /// Clears every outstanding code for a user. Called once a code is redeemed,
