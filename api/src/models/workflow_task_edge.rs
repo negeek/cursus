@@ -18,7 +18,7 @@ use crate::models::{Workflow, WorkflowTask};
 /// target. The consequence is that deleting a `WorkflowTask` will NOT clean up
 /// the edges referencing it, so the delete path has to remove them explicitly.
 /// See docs/restructure-plan.md section 0, finding 6.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "workflow_task_edges"]
 #[unique(workflow_id, from_task_id, to_task_id)]
 pub struct WorkflowTaskEdge {

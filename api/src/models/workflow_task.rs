@@ -7,7 +7,7 @@ use crate::models::{Task, Workflow, WorkflowTaskState};
 
 /// One step in a workflow: a task, placed in a particular workflow, under a name
 /// unique to that workflow.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "workflow_tasks"]
 #[unique(workflow_id, step_name)]
 pub struct WorkflowTask {

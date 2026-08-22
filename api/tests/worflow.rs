@@ -5,15 +5,11 @@ use serde_json::json;
 
 const NONEXISTENT_ID: &str = "00000000-0000-0000-0000-000000000000";
 
-/// Tests are sequential for now
-/// TODO: Refactor tests to be independent and run in parallel
-
 #[actix_web::test]
 async fn test_create_workflow_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
 
     let auth_header = (
         header::AUTHORIZATION,
@@ -41,12 +37,11 @@ async fn test_create_workflow_success() {
 
 #[actix_web::test]
 async fn test_list_workflows_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
-    common::workflow::test_workflow(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
+    common::workflow::test_workflow(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -65,12 +60,11 @@ async fn test_list_workflows_success() {
 
 #[actix_web::test]
 async fn test_get_workflow_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
-    let workflow = common::workflow::test_workflow(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
+    let workflow = common::workflow::test_workflow(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -95,12 +89,11 @@ async fn test_get_workflow_success() {
 
 #[actix_web::test]
 async fn test_edit_workflow_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
-    let workflow = common::workflow::test_workflow(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
+    let workflow = common::workflow::test_workflow(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::patch()
@@ -126,12 +119,11 @@ async fn test_edit_workflow_success() {
 
 #[actix_web::test]
 async fn test_delete_workflow_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
-    let workflow = common::workflow::test_workflow(&db, test_user.id.to_string()).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
+    let workflow = common::workflow::test_workflow(&mut db, test_user.id.to_string()).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::delete()
@@ -156,22 +148,22 @@ async fn test_delete_workflow_success() {
 
 #[actix_web::test]
 async fn test_get_workflow_detail_success() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_user = common::user::test_user(&db, None, None).await;
-    let test_tokens = common::user::test_tokens(&db, Some(test_user.clone())).await;
-    let workflow = common::workflow::test_workflow(&db, test_user.id.to_string()).await;
-    let task1 = common::task::test_task(&db, test_user.id.to_string()).await;
-    let task2 = common::task::test_task_dyn(&db, test_user.id.to_string(), "Task2".into()).await;
+    let mut db = common::test_db().await;
+    let test_user = common::user::test_user(&mut db, None, None).await;
+    let test_tokens = common::user::test_tokens(&mut db, Some(test_user.clone())).await;
+    let workflow = common::workflow::test_workflow(&mut db, test_user.id.to_string()).await;
+    let task1 = common::task::test_task(&mut db, test_user.id.to_string()).await;
+    let task2 =
+        common::task::test_task_dyn(&mut db, test_user.id.to_string(), "Task2".into()).await;
     let wt1 = common::workflow_task::test_workflow_task(
-        &db,
+        &mut db,
         workflow.id.to_string(),
         task1.id.to_string(),
         1,
     )
     .await;
     let wt2 = common::workflow_task::test_workflow_task_dyn(
-        &db,
+        &mut db,
         workflow.id.to_string(),
         task2.id.to_string(),
         2,
@@ -179,13 +171,13 @@ async fn test_get_workflow_detail_success() {
     )
     .await;
     common::worflow_task_edge::test_workflow_task_edge(
-        &db,
+        &mut db,
         workflow.id.to_string(),
         wt1.id.to_string(),
         wt2.id.to_string(),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -208,19 +200,13 @@ async fn test_get_workflow_detail_success() {
 
 #[actix_web::test]
 async fn test_workflow_endpoints_unauthenticated() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let app = common::setup_app(db.clone()).await;
     let wf_url =
         common::path::Paths::GET_EDIT_DELETE_WORKFLOW.replace("{workflow_id}", NONEXISTENT_ID);
 
-    let unauth_status = |r: Result<_, actix_web::Error>| {
-        r.map(|resp: actix_web::dev::ServiceResponse| resp.status())
-            .unwrap_or_else(|e| e.as_response_error().status_code())
-    };
-
     for status in [
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::get()
@@ -229,7 +215,7 @@ async fn test_workflow_endpoints_unauthenticated() {
             )
             .await,
         ),
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::post()
@@ -239,10 +225,10 @@ async fn test_workflow_endpoints_unauthenticated() {
             )
             .await,
         ),
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(&app, test::TestRequest::get().uri(&wf_url).to_request()).await,
         ),
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(
                 &app,
                 test::TestRequest::patch()
@@ -252,7 +238,7 @@ async fn test_workflow_endpoints_unauthenticated() {
             )
             .await,
         ),
-        unauth_status(
+        common::rejected_status(
             test::try_call_service(&app, test::TestRequest::delete().uri(&wf_url).to_request())
                 .await,
         ),
@@ -263,10 +249,9 @@ async fn test_workflow_endpoints_unauthenticated() {
 
 #[actix_web::test]
 async fn test_get_workflow_not_found() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let test_tokens = common::user::test_tokens(&db, None).await;
-    let app = common::setup_app(db).await;
+    let mut db = common::test_db().await;
+    let test_tokens = common::user::test_tokens(&mut db, None).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -286,23 +271,17 @@ async fn test_get_workflow_not_found() {
 
 #[actix_web::test]
 async fn test_get_workflow_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let workflow = common::workflow::test_workflow(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@test.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let workflow = common::workflow::test_workflow(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@test.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::get()
@@ -322,23 +301,17 @@ async fn test_get_workflow_wrong_user() {
 
 #[actix_web::test]
 async fn test_edit_workflow_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let workflow = common::workflow::test_workflow(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@test.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let workflow = common::workflow::test_workflow(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@test.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::patch()
@@ -359,23 +332,17 @@ async fn test_edit_workflow_wrong_user() {
 
 #[actix_web::test]
 async fn test_delete_workflow_wrong_user() {
-    let db = common::test_db().await;
-    common::truncate_db(&db).await;
-    let owner = common::user::test_user(&db, None, None).await;
-    let workflow = common::workflow::test_workflow(&db, owner.id.to_string()).await;
-    let other_tokens = common::user::test_tokens(
-        &db,
-        Some(
-            common::user::test_user(
-                &db,
-                Some("other_user".into()),
-                Some("other@test.com".into()),
-            )
-            .await,
-        ),
+    let mut db = common::test_db().await;
+    let owner = common::user::test_user(&mut db, None, None).await;
+    let workflow = common::workflow::test_workflow(&mut db, owner.id.to_string()).await;
+    let other_user = common::user::test_user(
+        &mut db,
+        Some("other_user".into()),
+        Some("other@test.com".into()),
     )
     .await;
-    let app = common::setup_app(db).await;
+    let other_tokens = common::user::test_tokens(&mut db, Some(other_user)).await;
+    let app = common::setup_app(db.clone()).await;
     let resp = test::call_service(
         &app,
         test::TestRequest::delete()

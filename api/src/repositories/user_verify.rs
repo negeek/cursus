@@ -53,6 +53,21 @@ impl UserVerifyRepository {
         .await
     }
 
+    /// The most recently issued code for a user.
+    ///
+    /// Ordered by the key, which increments, so the highest is the newest.
+    pub async fn find_latest_by_user_id(
+        &self,
+        db: &mut toasty::Db,
+        user_id: Uuid,
+    ) -> Result<Option<UserVerify>, toasty::Error> {
+        UserVerify::filter(UserVerify::fields().user_id().eq(user_id))
+            .order_by(UserVerify::fields().id().desc())
+            .first()
+            .exec(db)
+            .await
+    }
+
     /// Clears every outstanding code for a user. Called once a code is redeemed,
     /// so an older unused one cannot be presented afterwards.
     pub async fn delete_for_user(

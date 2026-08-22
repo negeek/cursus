@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::models::User;
 
 /// A pending email verification code.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "user_verifications"]
 pub struct UserVerify {
     #[key]

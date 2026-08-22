@@ -5,7 +5,7 @@ use jiff::civil::DateTime;
 /// Keeps the integer key it has always had rather than moving to a uuid. Nothing
 /// references these rows, they are only ever looked up by `jti`, so a uuid would
 /// buy nothing and cost the wider index.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "blacklisted_tokens"]
 pub struct BlacklistedToken {
     #[key]

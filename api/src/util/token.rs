@@ -45,8 +45,13 @@ pub struct Claims {
 }
 
 /// A unix timestamp `days` from now, which is the shape JWT `exp` claims take.
+///
+/// Counted in hours rather than days on purpose. A day is a calendar unit whose
+/// length depends on a time zone, so an absolute timestamp refuses to add one
+/// without a reference date. Token lifetimes are elapsed time, not calendar
+/// time, so a fixed 24 hours is the meaning wanted here anyway.
 fn expiry_in_days(days: i64) -> usize {
-    let span = jiff::Span::new().days(days);
+    let span = jiff::Span::new().hours(days * 24);
     jiff::Timestamp::now()
         .checked_add(span)
         .expect("token expiry is within the representable range")

@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::models::{WorkflowState, WorkflowTask};
 
 /// One step's outcome within one run of a workflow.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "workflow_task_states"]
 pub struct WorkflowTaskState {
     #[key]

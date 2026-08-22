@@ -9,7 +9,7 @@ use crate::models::{User, WorkflowTask};
 ///
 /// Cursus never runs this itself. It only ever calls the endpoint and waits for
 /// the result to come back.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "tasks"]
 pub struct Task {
     #[key]

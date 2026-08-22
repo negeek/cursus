@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::models::{Task, UserVerify, Workflow};
 
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "users"]
 pub struct User {
     #[key]

@@ -1,11 +1,9 @@
 use api::app::{ApplicationConfiguration, BindTarget};
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
-mod env_file;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_file::load(".env");
+    api::util::env_file::load(".env");
 
     let config = ApplicationConfiguration::from_env()?;
 

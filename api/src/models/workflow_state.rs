@@ -5,7 +5,7 @@ use crate::models::{Workflow, WorkflowTaskState};
 
 /// One run of a workflow. A workflow has many of these over its life, one per
 /// trigger.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "workflow_states"]
 pub struct WorkflowState {
     #[key]

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::models::{User, WorkflowState, WorkflowTask, WorkflowTaskEdge};
 
 /// A DAG of tasks, plus how it gets triggered.
-#[derive(Debug, toasty::Model)]
+#[derive(Clone, Debug, toasty::Model)]
 #[table = "workflows"]
 pub struct Workflow {
     #[key]

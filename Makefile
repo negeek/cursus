@@ -17,4 +17,4 @@ check:
 	@cargo check --workspace --all-targets
 
 test:
-	@cargo test -p api -- --test-threads=1
+	@cargo test -p api
