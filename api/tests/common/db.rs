@@ -72,25 +72,75 @@ async fn connect_admin(url: &str) -> tokio_postgres::Client {
     client
 }
 
-/// Names the template after the test binary.
+/// Identifies the test binary currently running.
 ///
-/// Each integration test file compiles to its own binary and they run at the
-/// same time, so a shared template name would have them dropping and recreating
-/// each other's template mid-run.
-fn template_name() -> String {
+/// Each integration test file compiles to its own binary, and they run
+/// alongside each other, so anything named per binary keeps them from
+/// interfering.
+fn binary_name() -> String {
     let binary = std::env::current_exe()
         .ok()
         .and_then(|path| path.file_stem().map(|s| s.to_string_lossy().into_owned()))
         .unwrap_or_else(|| "api".to_string());
 
-    // Cargo appends a hash to the test binary name, which changes on every
-    // rebuild. Trimming it keeps the template stable across runs.
-    let stem = binary.split('-').next().unwrap_or(&binary);
-    format!("cursus_test_template_{stem}")
+    // Cargo appends a hash that changes on every rebuild. Trimming it keeps
+    // these names stable across runs.
+    binary
+        .split('-')
+        .next()
+        .unwrap_or(&binary)
+        .replace(|c: char| !c.is_ascii_alphanumeric() && c != '_', "_")
+}
+
+fn template_name() -> String {
+    format!("cursus_test_template_{}", binary_name())
+}
+
+/// The prefix every database belonging to this binary shares.
+///
+/// Namespacing by binary is what makes the sweep safe: a binary only ever drops
+/// its own leftovers, so it can never race another binary that is mid-run.
+fn database_prefix() -> String {
+    format!("cursus_test_{}_", binary_name())
+}
+
+/// Drops databases left behind by earlier runs.
+///
+/// A test's database is not dropped when the test ends, because there is no
+/// reliable place to do it: a panicking test never reaches its own cleanup, and
+/// an async drop guard cannot await. Left alone they accumulate on every run
+/// until the server is full of them.
+///
+/// Sweeping at the start of a run instead means at most one run's worth is ever
+/// on disk, and a failed test's database survives long enough to be inspected,
+/// which is exactly when that is most useful.
+///
+/// Only this binary's own databases are touched, so a binary running at the
+/// same time is never at risk. Anything still in use cannot be dropped anyway
+/// and is simply skipped.
+async fn sweep_old_databases(admin: &tokio_postgres::Client) {
+    let pattern = format!("{}%", database_prefix());
+    let Ok(rows) = admin
+        .query(
+            "SELECT datname FROM pg_database WHERE datname LIKE $1",
+            &[&pattern],
+        )
+        .await
+    else {
+        return;
+    };
+
+    for row in rows {
+        let name: String = row.get(0);
+        let _ = admin
+            .batch_execute(&format!("DROP DATABASE IF EXISTS \"{name}\""))
+            .await;
+    }
 }
 
 async fn build_template(base: &Url, name: &str) {
     let admin = connect_admin(admin_url(base).as_str()).await;
+    sweep_old_databases(&admin).await;
 
     // A previous run may have left the template behind, possibly with an older
     // schema. Drop it rather than trusting it. Connections have to be closed
@@ -155,7 +205,7 @@ async fn ensure_template() -> String {
 pub async fn provision() -> String {
     let template = ensure_template().await;
     let base = base_url();
-    let name = format!("cursus_test_{}", uuid::Uuid::now_v7().simple());
+    let name = format!("{}{}", database_prefix(), uuid::Uuid::now_v7().simple());
 
     let admin = connect_admin(admin_url(&base).as_str()).await;
     admin
