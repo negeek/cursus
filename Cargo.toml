@@ -6,37 +6,33 @@ version = "0.1.0"
 
 [workspace]
 resolver = "3"
-members = [".", "api", "migration"]
+members = [".", "api"]
 
 [workspace.dependencies]
-actix-web = "4"
+actix-web = { version = "4", default-features = false, features = ["macros", "unicode"] }
 actix-http = "3.12.1"
-sea-orm = { version = "2.0.0-rc", features = ["sqlx-postgres", "runtime-tokio-native-tls", "with-chrono", "with-uuid", "macros", "debug-print", "mock", "schema-sync", "entity-registry"] }
-dotenvy = "0.15.7"
+toasty = { version = "0.10", features = ["postgresql", "migration", "jiff", "serde"] }
+toasty-cli = "0.10"
+toasty-core = "0.10"
+jiff = { version = "0.2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.149"
 uuid = { version = "1", features = ["v7", "v4"] }
-chrono = "0.4"
 bcrypt = "0.19.0"
 rand = "0.10.1"
-either = "1.15.0"
 jsonwebtoken = { version = "10.3.0", features = ["aws_lc_rs"] }
-futures-util = "0.3"
 cron = "0.16.0"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
-sea-orm-migration = { version = "2.0.0-rc.37" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tracing-actix-web = "0.7"
-utoipa = { version = "5", features = ["actix_extras", "chrono", "uuid"] }
+utoipa = { version = "5", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "8", features = ["actix-web"] }
+tokio-postgres = "0.7"
+url = "2"
+anyhow = "1"
 
 [dependencies]
 api = { path = "api" }
-migration = { path = "migration" }
 actix-web = { workspace = true }
-sea-orm = { workspace = true }
-dotenvy = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tracing-actix-web = { workspace = true }

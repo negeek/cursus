@@ -6,20 +6,37 @@ edition = "2024"
 [dependencies]
 actix-web = { workspace = true }
 actix-http = { workspace = true }
-sea-orm = { workspace = true }
-dotenvy = { workspace = true }
+toasty = { workspace = true }
+jiff = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
-chrono = { workspace = true }
 bcrypt = { workspace = true }
 rand = { workspace = true }
-either = { workspace = true }
 jsonwebtoken = { workspace = true }
-futures-util = { workspace = true }
 cron = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-tracing-actix-web = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
+
+# Generating migration files is a development action, not something the server
+# does, so the CLI and its argument parsing stay behind a feature flag and never
+# reach the shipped binary. Applying migrations at runtime does not need this,
+# that goes through embed_migrations! in the toasty crate itself.
+toasty-cli = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tokio-postgres = { workspace = true }
+url = { workspace = true }
+
+[features]
+cli = ["dep:toasty-cli", "dep:tokio", "dep:anyhow"]
+
+[[bin]]
+name = "migrator"
+path = "src/bin/migrator.rs"
+required-features = ["cli"]
