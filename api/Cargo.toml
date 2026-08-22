@@ -19,6 +19,10 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 utoipa = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
+# Needed to tell a unique constraint violation apart from any other database
+# failure. Toasty surfaces the driver error underneath, so recognising the
+# Postgres SQLSTATE means downcasting to the driver's own error type.
+tokio-postgres = { workspace = true }
 
 # Generating migration files is a development action, not something the server
 # does, so the CLI and its argument parsing stay behind a feature flag and never
