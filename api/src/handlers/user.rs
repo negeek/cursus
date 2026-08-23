@@ -131,3 +131,20 @@ pub async fn refresh_access_token(
         .await?;
     Ok(web::Json(RefreshAccessResponse { access_token }))
 }
+
+/// Registers every account route.
+///
+/// Logout is the one that needs a signed in caller, so it carries the auth
+/// middleware itself rather than the whole account scope requiring a token that
+/// signup and signin cannot have yet.
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(sign_up)
+        .service(signin)
+        .service(verify_email)
+        .service(
+            web::resource("/logout")
+                .wrap(crate::middlewares::user::Auth)
+                .route(web::post().to(logout)),
+        )
+        .service(refresh_access_token);
+}

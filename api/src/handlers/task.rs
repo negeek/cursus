@@ -143,3 +143,15 @@ pub async fn delete_task(
         message: "Task deleted successfully".to_string(),
     }))
 }
+
+/// Registers every task route.
+///
+/// Lives here rather than in `app.rs` so adding an endpoint is a one file
+/// change: the handler and its registration sit together.
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_tasks)
+        .service(create_task)
+        .service(get_task)
+        .service(edit_task)
+        .service(delete_task);
+}

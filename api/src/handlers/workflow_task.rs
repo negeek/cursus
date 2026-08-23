@@ -148,3 +148,11 @@ pub async fn delete_workflow_task(
         message: "Workflow task deleted successfully".to_string(),
     }))
 }
+
+/// Registers every workflow step route.
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(create_workflow_task)
+        .service(get_workflow_task)
+        .service(edit_workflow_task)
+        .service(delete_workflow_task);
+}

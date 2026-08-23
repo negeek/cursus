@@ -135,6 +135,20 @@ impl ApplicationConfiguration {
         App::new()
             .app_data(web::Data::new(state))
             .app_data(json_config)
+            // `RequestEvent` must stay the LAST wrap, which in actix means the
+            // outermost one, entered first on the way in and left last on the
+            // way out. Two things depend on it:
+            //
+            // Enrichment. The request event it opens is what auth, services and
+            // repositories add context to as the request runs. Anything wrapped
+            // outside it would run before that event exists and have nowhere to
+            // record anything.
+            //
+            // Completeness. Only a middleware outside every other one sees the
+            // requests the inner ones reject. Put auth outside this and a 401
+            // never gets logged at all.
+            //
+            // So any middleware added later, CORS included, goes ABOVE this line.
             .wrap(RequestEvent)
             .service(handlers::root)
             .service(
@@ -143,39 +157,17 @@ impl ApplicationConfiguration {
             )
             .service(
                 web::scope("/api/v1")
-                    .service(
-                        web::scope("/account")
-                            .service(handlers::user::sign_up)
-                            .service(handlers::user::signin)
-                            .service(handlers::user::verify_email)
-                            .service(
-                                web::resource("/logout")
-                                    .wrap(middlewares::user::Auth)
-                                    .route(web::post().to(handlers::user::logout)),
-                            )
-                            .service(handlers::user::refresh_access_token),
-                    )
+                    .service(web::scope("/account").configure(handlers::user::configure))
+                    // The authentication boundary stays here rather than inside
+                    // each module, so what requires a token is one visible fact
+                    // rather than something to confirm across six files.
                     .service(
                         web::scope("")
                             .wrap(middlewares::user::Auth)
-                            .service(handlers::task::get_tasks)
-                            .service(handlers::task::create_task)
-                            .service(handlers::task::get_task)
-                            .service(handlers::task::edit_task)
-                            .service(handlers::task::delete_task)
-                            .service(handlers::workflow::get_workflows)
-                            .service(handlers::workflow::create_workflow)
-                            .service(handlers::workflow::get_workflow_detail)
-                            .service(handlers::workflow::get_workflow)
-                            .service(handlers::workflow::edit_workflow)
-                            .service(handlers::workflow::delete_workflow)
-                            .service(handlers::workflow_task::create_workflow_task)
-                            .service(handlers::workflow_task::get_workflow_task)
-                            .service(handlers::workflow_task::edit_workflow_task)
-                            .service(handlers::workflow_task::delete_workflow_task)
-                            .service(handlers::workflow_task_edge::create_workflow_task_edge)
-                            .service(handlers::workflow_task_edge::edit_workflow_task_edge)
-                            .service(handlers::workflow_task_edge::delete_workflow_task_edge),
+                            .configure(handlers::task::configure)
+                            .configure(handlers::workflow::configure)
+                            .configure(handlers::workflow_task::configure)
+                            .configure(handlers::workflow_task_edge::configure),
                     ),
             )
     }

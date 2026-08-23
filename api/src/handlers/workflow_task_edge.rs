@@ -111,3 +111,10 @@ pub async fn delete_workflow_task_edge(
         message: "Edge deleted successfully".to_string(),
     }))
 }
+
+/// Registers every workflow edge route.
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(create_workflow_task_edge)
+        .service(edit_workflow_task_edge)
+        .service(delete_workflow_task_edge);
+}
