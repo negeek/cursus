@@ -24,22 +24,24 @@ utoipa-swagger-ui = { workspace = true }
 # Postgres SQLSTATE means downcasting to the driver's own error type.
 tokio-postgres = { workspace = true }
 thiserror = { workspace = true }
+# Already in the tree via actix-web. Named directly for `task_local!`, which the
+# request event middleware uses to let any layer add context to the current
+# request without it being passed down.
+tokio = { workspace = true }
 
 # Generating migration files is a development action, not something the server
 # does, so the CLI and its argument parsing stay behind a feature flag and never
 # reach the shipped binary. Applying migrations at runtime does not need this,
 # that goes through embed_migrations! in the toasty crate itself.
 toasty-cli = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
 tokio-postgres = { workspace = true }
 url = { workspace = true }
 
 [features]
-cli = ["dep:toasty-cli", "dep:tokio", "dep:anyhow"]
+cli = ["dep:toasty-cli", "dep:anyhow"]
 
 [[bin]]
 name = "migrator"

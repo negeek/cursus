@@ -1,19 +1,12 @@
 //! Where domain errors become HTTP responses.
 //!
-//! The service error enums in `crate::dtos::error` deliberately know nothing
-//! about HTTP. They describe what went wrong in the language of the domain, so
-//! the same error means the same thing whether it came out of a request, the
-//! runner, or a background job. This module is the one place that decides what
-//! each of them looks like on the wire.
+//! The error enums in `crate::dtos::error` know nothing about HTTP, so a service
+//! can be called from the runner or a background job. This module holds the
+//! mapping to status codes.
 //!
-//! Keeping the mapping here rather than on the enums means a service can be
-//! called from somewhere that has no notion of a status code without dragging
-//! actix along with it.
-//!
-//! One rule runs through all of it: a database failure never reaches the caller
-//! in detail. It is logged with its cause and answered with a flat internal
-//! error, because the text of a database error can leak schema and query shape
-//! to whoever is asking.
+//! A database failure never reaches the caller in detail. Its text can leak
+//! schema and query shape, so it goes to the log line and the caller gets a flat
+//! internal error.
 
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, ResponseError};
@@ -24,17 +17,28 @@ use crate::dtos::error::user::UserServiceError;
 use crate::dtos::error::workflow::WorkflowServiceError;
 use crate::dtos::error::workflow_task::WorkflowTaskServiceError;
 use crate::dtos::error::workflow_task_edge::WorkflowTaskEdgeServiceError;
+use crate::middlewares::request_event::{add_context, context_key};
 
 /// Builds the response for an error that is the caller's to fix, so the message
 /// is safe and useful to show them.
+///
+/// The same message goes onto the log line. Without it a 4xx says only that
+/// something was refused, not which rule refused it.
 fn client_error(status: StatusCode, message: String) -> HttpResponse {
+    add_context(
+        context_key::ERROR,
+        serde_json::json!({ "reason": message.clone() }),
+    );
     HttpResponse::build(status).json(ApiError { error: message })
 }
 
-/// Builds the response for a failure on our side. The detail is logged, never
-/// returned.
+/// Builds the response for a failure on our side. The cause goes onto the
+/// request's log line, never into the response.
 fn internal_error(error: &dyn std::fmt::Display) -> HttpResponse {
-    tracing::error!(cause = %error, "request failed with an internal error");
+    add_context(
+        context_key::ERROR,
+        serde_json::json!({ "cause": error.to_string() }),
+    );
     HttpResponse::InternalServerError().json(ApiError::internal_server_error())
 }
 

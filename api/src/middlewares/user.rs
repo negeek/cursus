@@ -14,6 +14,7 @@ use std::future::{Ready, ready};
 use std::pin::Pin;
 
 use crate::dtos::error::ApiError;
+use crate::middlewares::request_event::{add_context, context_key, set_user_id};
 use actix_web::{HttpResponse, ResponseError};
 use std::rc::Rc;
 #[derive(Clone)]
@@ -54,6 +55,18 @@ impl ResponseError for AuthError {
             AuthError::InvalidToken => HttpResponse::Unauthorized().json(api_error),
         }
     }
+}
+
+/// Records why a request was turned away, then returns the error.
+///
+/// Every 401 looks the same to the caller on purpose. The log line is where the
+/// difference between a missing header and a revoked token has to show up.
+fn reject(reason: &str, error: AuthError) -> Error {
+    add_context(
+        context_key::AUTH,
+        serde_json::json!({ "outcome": "rejected", "reason": reason }),
+    );
+    error.into()
 }
 
 pub struct Auth;
@@ -101,28 +114,36 @@ where
             // check header exists
             let header = match auth_header {
                 Some(h) => h,
-                None => return Err(AuthError::Unauthorised.into()),
+                None => return Err(reject("no authorization header", AuthError::Unauthorised)),
             };
 
             // parse token
-            let token_str = header.to_str().map_err(|_| AuthError::InvalidToken)?;
+            let token_str = header
+                .to_str()
+                .map_err(|_| reject("unreadable authorization header", AuthError::InvalidToken))?;
             let parts: Vec<&str> = token_str.split(' ').collect();
             if parts.len() != 2 || parts[0] != "Bearer" {
-                return Err(AuthError::InvalidToken.into());
+                return Err(reject("not a bearer token", AuthError::InvalidToken));
             }
 
             // validate JWT
-            let claims = TokenCodec::validate(parts[1]).map_err(|_| AuthError::InvalidToken)?;
+            let claims = TokenCodec::validate(parts[1])
+                .map_err(|_| reject("token failed validation", AuthError::InvalidToken))?;
 
             if claims.ttype != TokenType::Access.to_string() {
-                return Err(AuthError::InvalidToken.into());
+                return Err(reject("not an access token", AuthError::InvalidToken));
             }
+
+            // The signature is verified by this point, so the subject is
+            // trustworthy. Recorded before the revocation and lookup checks so a
+            // rejected request still says whose token was presented.
+            set_user_id(&claims.sub);
 
             // Toasty needs an owned, mutable handle, so take a clone of the
             // pooled one rather than borrowing out of the shared state.
             let mut db = req
                 .app_data::<web::Data<AppState>>()
-                .ok_or(AuthError::Unauthorised)?
+                .ok_or_else(|| reject("application state missing", AuthError::Unauthorised))?
                 .db
                 .clone();
 
@@ -131,17 +152,18 @@ where
             if BlacklistTokenRepository
                 .is_blacklisted(&mut db, &claims.jti)
                 .await
-                .map_err(|_| AuthError::Unauthorised)?
+                .map_err(|_| reject("blacklist lookup failed", AuthError::Unauthorised))?
             {
-                return Err(AuthError::InvalidToken.into());
+                return Err(reject("token was revoked", AuthError::InvalidToken));
             }
 
-            let id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| AuthError::InvalidToken)?;
+            let id = uuid::Uuid::parse_str(&claims.sub)
+                .map_err(|_| reject("subject is not a valid id", AuthError::InvalidToken))?;
             let user = UserRepository
                 .find_by_id(&mut db, id)
                 .await
-                .map_err(|_| AuthError::Unauthorised)?
-                .ok_or(AuthError::Unauthorised)?;
+                .map_err(|_| reject("user lookup failed", AuthError::Unauthorised))?
+                .ok_or_else(|| reject("no user for this token", AuthError::Unauthorised))?;
 
             // attach AuthUser to request extensions
             req.extensions_mut().insert(AuthUser {
