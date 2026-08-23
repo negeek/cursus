@@ -38,7 +38,7 @@ pub async fn create_workflow_task_edge(
         .create_workflow_task_edge(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
     Ok((
-        web::Json(WorkflowTaskEdgeResponse::from_workflow_task_edge_row(edge)),
+        web::Json(WorkflowTaskEdgeResponse::from(edge)),
         StatusCode::CREATED,
     ))
 }
@@ -76,9 +76,7 @@ pub async fn edit_workflow_task_edge(
     let edge = service
         .edit_workflow_task_edge(&mut db, &user.id, &workflow_id, &edge_id, body.into_inner())
         .await?;
-    Ok(web::Json(
-        WorkflowTaskEdgeResponse::from_workflow_task_edge_row(edge),
-    ))
+    Ok(web::Json(WorkflowTaskEdgeResponse::from(edge)))
 }
 
 #[utoipa::path(

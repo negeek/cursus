@@ -4,7 +4,7 @@ use crate::dtos::error::task::TaskServiceError;
 use crate::dtos::task::{CreateTaskRequest, EditTaskRequest};
 use crate::models::Task;
 use crate::repositories::task::{CreateTaskParams, TaskRepository, UpdateTaskParams};
-use crate::util::type_conv::json_to_value;
+use crate::util::type_conv::{json_to_value, parse_uuid};
 
 pub struct TaskService {
     tasks: TaskRepository,
@@ -53,7 +53,8 @@ impl TaskService {
         user_id: &str,
         request: CreateTaskRequest,
     ) -> Result<Task, TaskServiceError> {
-        let user_id = parse_user_id(user_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| TaskServiceError::InvalidUserId(user_id.to_string()))?;
 
         let result_schema = json_to_value(request.result_schema).map_err(|_| {
             TaskServiceError::InvalidJsonField {
@@ -87,8 +88,10 @@ impl TaskService {
         task_id: &str,
         request: EditTaskRequest,
     ) -> Result<Task, TaskServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let task_id = parse_task_id(task_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| TaskServiceError::InvalidUserId(user_id.to_string()))?;
+        let task_id = parse_uuid(task_id)
+            .map_err(|_| TaskServiceError::InvalidTaskId(task_id.to_string()))?;
 
         let mut task = self.owned_task(db, user_id, task_id).await?;
 
@@ -123,8 +126,10 @@ impl TaskService {
         user_id: &str,
         task_id: &str,
     ) -> Result<(), TaskServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let task_id = parse_task_id(task_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| TaskServiceError::InvalidUserId(user_id.to_string()))?;
+        let task_id = parse_uuid(task_id)
+            .map_err(|_| TaskServiceError::InvalidTaskId(task_id.to_string()))?;
 
         self.owned_task(db, user_id, task_id).await?;
         self.tasks.delete(db, task_id).await?;
@@ -136,7 +141,8 @@ impl TaskService {
         db: &mut toasty::Db,
         user_id: &str,
     ) -> Result<Vec<Task>, TaskServiceError> {
-        let user_id = parse_user_id(user_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| TaskServiceError::InvalidUserId(user_id.to_string()))?;
         Ok(self.tasks.find_by_user_id(db, user_id).await?)
     }
 
@@ -146,16 +152,10 @@ impl TaskService {
         user_id: &str,
         task_id: &str,
     ) -> Result<Task, TaskServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let task_id = parse_task_id(task_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| TaskServiceError::InvalidUserId(user_id.to_string()))?;
+        let task_id = parse_uuid(task_id)
+            .map_err(|_| TaskServiceError::InvalidTaskId(task_id.to_string()))?;
         self.owned_task(db, user_id, task_id).await
     }
-}
-
-fn parse_user_id(value: &str) -> Result<Uuid, TaskServiceError> {
-    Uuid::parse_str(value).map_err(|_| TaskServiceError::InvalidUserId(value.to_string()))
-}
-
-fn parse_task_id(value: &str) -> Result<Uuid, TaskServiceError> {
-    Uuid::parse_str(value).map_err(|_| TaskServiceError::InvalidTaskId(value.to_string()))
 }

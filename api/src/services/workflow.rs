@@ -8,7 +8,7 @@ use crate::repositories::workflow::{
 };
 use crate::repositories::workflow_task::WorkflowTaskRepository;
 use crate::repositories::workflow_task_edge::WorkflowTaskEdgeRepository;
-use crate::util::type_conv::option_string_to_option_datetime;
+use crate::util::type_conv::{option_string_to_option_datetime, parse_uuid};
 
 pub struct WorkflowService {
     workflows: WorkflowRepository,
@@ -59,7 +59,8 @@ impl WorkflowService {
         user_id: &str,
         request: CreateWorkflowRequest,
     ) -> Result<Workflow, WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
         let schedule_time = option_string_to_option_datetime(request.schedule_time)
             .map_err(|_| WorkflowServiceError::InvalidScheduleTime)?;
 
@@ -90,8 +91,10 @@ impl WorkflowService {
         workflow_id: &str,
         request: EditWorkflowRequest,
     ) -> Result<Workflow, WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let workflow_id = parse_workflow_id(workflow_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
+        let workflow_id = parse_uuid(workflow_id)
+            .map_err(|_| WorkflowServiceError::InvalidWorkflowId(workflow_id.to_string()))?;
 
         let mut workflow = self.owned_workflow(db, user_id, workflow_id).await?;
 
@@ -123,8 +126,10 @@ impl WorkflowService {
         user_id: &str,
         workflow_id: &str,
     ) -> Result<Workflow, WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let workflow_id = parse_workflow_id(workflow_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
+        let workflow_id = parse_uuid(workflow_id)
+            .map_err(|_| WorkflowServiceError::InvalidWorkflowId(workflow_id.to_string()))?;
         self.owned_workflow(db, user_id, workflow_id).await
     }
 
@@ -136,8 +141,10 @@ impl WorkflowService {
         user_id: &str,
         workflow_id: &str,
     ) -> Result<WorkflowDetailResponse, WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let workflow_id = parse_workflow_id(workflow_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
+        let workflow_id = parse_uuid(workflow_id)
+            .map_err(|_| WorkflowServiceError::InvalidWorkflowId(workflow_id.to_string()))?;
 
         let workflow = self.owned_workflow(db, user_id, workflow_id).await?;
         let tasks = self
@@ -146,9 +153,7 @@ impl WorkflowService {
             .await?;
         let edges = self.edges.find_by_workflow_id(db, workflow_id).await?;
 
-        Ok(WorkflowDetailResponse::from_workflow_row(
-            workflow, tasks, edges,
-        ))
+        Ok(WorkflowDetailResponse::new(workflow, tasks, edges))
     }
 
     pub async fn delete_workflow(
@@ -157,8 +162,10 @@ impl WorkflowService {
         user_id: &str,
         workflow_id: &str,
     ) -> Result<(), WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
-        let workflow_id = parse_workflow_id(workflow_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
+        let workflow_id = parse_uuid(workflow_id)
+            .map_err(|_| WorkflowServiceError::InvalidWorkflowId(workflow_id.to_string()))?;
 
         self.owned_workflow(db, user_id, workflow_id).await?;
 
@@ -173,15 +180,8 @@ impl WorkflowService {
         db: &mut toasty::Db,
         user_id: &str,
     ) -> Result<Vec<Workflow>, WorkflowServiceError> {
-        let user_id = parse_user_id(user_id)?;
+        let user_id = parse_uuid(user_id)
+            .map_err(|_| WorkflowServiceError::InvalidUserId(user_id.to_string()))?;
         Ok(self.workflows.find_by_user_id(db, user_id).await?)
     }
-}
-
-fn parse_user_id(value: &str) -> Result<Uuid, WorkflowServiceError> {
-    Uuid::parse_str(value).map_err(|_| WorkflowServiceError::InvalidUserId(value.to_string()))
-}
-
-fn parse_workflow_id(value: &str) -> Result<Uuid, WorkflowServiceError> {
-    Uuid::parse_str(value).map_err(|_| WorkflowServiceError::InvalidWorkflowId(value.to_string()))
 }

@@ -1,12 +1,13 @@
+use crate::util::type_conv::datetime_to_rfc3339;
 use std::str::FromStr;
 
 use crate::dtos::RequestValidateTrait;
 use crate::dtos::error::ValidationError;
 use crate::dtos::workflow_task::WorkflowTaskResponse;
 use crate::dtos::workflow_task_edge::WorkflowTaskEdgeResponse;
-use crate::models::Workflow as WorkflowRow;
-use crate::models::WorkflowTask as WorkflowTaskRow;
-use crate::models::WorkflowTaskEdge as WorkflowTaskEdgeRow;
+use crate::models::Workflow;
+use crate::models::WorkflowTask;
+use crate::models::WorkflowTaskEdge;
 use cron::Schedule;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -162,31 +163,26 @@ pub struct WorkflowDetailResponse {
 }
 
 impl WorkflowDetailResponse {
-    pub fn from_workflow_row(
-        workflow_row: WorkflowRow,
-        tasks: Vec<WorkflowTaskRow>,
-        edges: Vec<WorkflowTaskEdgeRow>,
+    pub fn new(
+        workflow_row: Workflow,
+        tasks: Vec<WorkflowTask>,
+        edges: Vec<WorkflowTaskEdge>,
     ) -> Self {
-        let tasks = tasks
-            .into_iter()
-            .map(WorkflowTaskResponse::from_workflow_task_row)
-            .collect();
+        let tasks = tasks.into_iter().map(WorkflowTaskResponse::from).collect();
         let edges = edges
             .into_iter()
-            .map(WorkflowTaskEdgeResponse::from_workflow_task_edge_row)
+            .map(WorkflowTaskEdgeResponse::from)
             .collect();
         WorkflowDetailResponse {
             id: workflow_row.id.to_string(),
             name: workflow_row.name,
             description: workflow_row.description,
             run_type: workflow_row.run_type,
-            schedule_time: workflow_row
-                .schedule_time
-                .map(crate::util::type_conv::datetime_to_rfc3339),
+            schedule_time: workflow_row.schedule_time.map(datetime_to_rfc3339),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
-            date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),
-            date_updated: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_updated),
+            date_created: datetime_to_rfc3339(workflow_row.date_created),
+            date_updated: datetime_to_rfc3339(workflow_row.date_updated),
             tasks,
             edges,
         }
@@ -211,20 +207,18 @@ pub struct DeleteWorkflowResponse {
     pub message: String,
 }
 
-impl WorkflowResponse {
-    pub fn from_workflow_row(workflow_row: WorkflowRow) -> Self {
+impl From<Workflow> for WorkflowResponse {
+    fn from(workflow_row: Workflow) -> Self {
         WorkflowResponse {
             id: workflow_row.id.to_string(),
             name: workflow_row.name,
             description: workflow_row.description,
             run_type: workflow_row.run_type,
-            schedule_time: workflow_row
-                .schedule_time
-                .map(crate::util::type_conv::datetime_to_rfc3339),
+            schedule_time: workflow_row.schedule_time.map(datetime_to_rfc3339),
             cron_expression: workflow_row.cron_expression,
             is_active: workflow_row.is_active,
-            date_created: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_created),
-            date_updated: crate::util::type_conv::datetime_to_rfc3339(workflow_row.date_updated),
+            date_created: datetime_to_rfc3339(workflow_row.date_created),
+            date_updated: datetime_to_rfc3339(workflow_row.date_updated),
         }
     }
 }

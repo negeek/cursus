@@ -23,8 +23,7 @@ pub async fn get_tasks(
     let mut db = state.db.clone();
     let task_service = TaskService::new();
     let tasks = task_service.get_user_tasks(&mut db, &user.id).await?;
-    let response_tasks: Vec<TaskResponse> =
-        tasks.into_iter().map(TaskResponse::from_task_row).collect();
+    let response_tasks: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
     Ok(web::Json(response_tasks))
 }
 
@@ -52,10 +51,7 @@ pub async fn create_task(
     let task = user_service
         .create_task(&mut db, &user.id, body.into_inner())
         .await?;
-    Ok((
-        web::Json(TaskResponse::from_task_row(task)),
-        StatusCode::CREATED,
-    ))
+    Ok((web::Json(TaskResponse::from(task)), StatusCode::CREATED))
 }
 
 #[utoipa::path(
@@ -83,7 +79,7 @@ pub async fn get_task(
     let task = task_service
         .get_task_by_id(&mut db, &user.id, &task_id)
         .await?;
-    Ok(web::Json(TaskResponse::from_task_row(task)))
+    Ok(web::Json(TaskResponse::from(task)))
 }
 
 #[utoipa::path(
@@ -115,7 +111,7 @@ pub async fn edit_task(
     let task = user_service
         .edit_task(&mut db, &user.id, &task_id, body.into_inner())
         .await?;
-    Ok(web::Json(TaskResponse::from_task_row(task)))
+    Ok(web::Json(TaskResponse::from(task)))
 }
 
 #[utoipa::path(

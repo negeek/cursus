@@ -9,7 +9,7 @@ use crate::repositories::workflow::WorkflowRepository;
 use crate::repositories::workflow_task::{
     CreateWorkflowTaskParams, UpdateWorkflowTaskParams, WorkflowTaskRepository,
 };
-use crate::util::type_conv::{json_to_value, option_u32_to_option_i32};
+use crate::util::type_conv::{json_to_value, option_u32_to_option_i32, parse_uuid};
 
 pub struct WorkflowTaskService {
     workflows: WorkflowRepository,
@@ -70,8 +70,10 @@ impl WorkflowTaskService {
         workflow_id: &str,
         request: CreateWorkflowTaskRequest,
     ) -> Result<WorkflowTask, Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let task_id = parse_id(&request.task_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let task_id =
+            parse_uuid(&request.task_id).map_err(|_| Error::InvalidId(request.task_id.clone()))?;
 
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
 
@@ -137,8 +139,10 @@ impl WorkflowTaskService {
         workflow_task_id: &str,
         request: EditWorkflowTaskRequest,
     ) -> Result<WorkflowTask, Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let workflow_task_id = parse_id(workflow_task_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let workflow_task_id = parse_uuid(workflow_task_id)
+            .map_err(|_| Error::InvalidId(workflow_task_id.to_string()))?;
 
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
         let mut workflow_task = self
@@ -189,8 +193,10 @@ impl WorkflowTaskService {
         workflow_id: &str,
         workflow_task_id: &str,
     ) -> Result<WorkflowTask, Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let workflow_task_id = parse_id(workflow_task_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let workflow_task_id = parse_uuid(workflow_task_id)
+            .map_err(|_| Error::InvalidId(workflow_task_id.to_string()))?;
 
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
         self.step_in_workflow(db, workflow_id, workflow_task_id)
@@ -204,8 +210,10 @@ impl WorkflowTaskService {
         workflow_id: &str,
         workflow_task_id: &str,
     ) -> Result<(), Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let workflow_task_id = parse_id(workflow_task_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let workflow_task_id = parse_uuid(workflow_task_id)
+            .map_err(|_| Error::InvalidId(workflow_task_id.to_string()))?;
 
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
         self.step_in_workflow(db, workflow_id, workflow_task_id)
@@ -218,8 +226,4 @@ impl WorkflowTaskService {
         self.workflow_tasks.delete(db, workflow_task_id).await?;
         Ok(())
     }
-}
-
-fn parse_id(value: &str) -> Result<Uuid, Error> {
-    Uuid::parse_str(value).map_err(|_| Error::InvalidId(value.to_string()))
 }

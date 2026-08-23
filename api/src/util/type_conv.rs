@@ -1,3 +1,28 @@
+/// Parses a path or body string into a `Uuid`.
+///
+/// Deliberately returns uuid's own error rather than a service error. Every
+/// service names a bad id differently, `InvalidTaskId`, `InvalidWorkflowId`,
+/// `InvalidId`, and each caller maps this into whichever of those fits. Sharing
+/// the parse without sharing the naming is the whole point: the conversion is
+/// identical everywhere, the error is not.
+pub fn parse_uuid(value: &str) -> Result<uuid::Uuid, uuid::Error> {
+    uuid::Uuid::parse_str(value)
+}
+
+/// Converts a unix timestamp in seconds into the shape the timestamp columns
+/// use.
+///
+/// Falls back to the current time if the value is out of range. For the caller
+/// that motivated this, a JWT expiry claim being written to the token
+/// blacklist, that is the safe direction to fail: an entry that looks already
+/// expired gets cleaned up early, whereas dropping the row would leave a
+/// revoked token working.
+pub fn timestamp_to_datetime(seconds: usize) -> jiff::civil::DateTime {
+    jiff::Timestamp::from_second(seconds as i64)
+        .map(|ts| ts.to_zoned(jiff::tz::TimeZone::UTC).datetime())
+        .unwrap_or_else(|_| crate::models::now())
+}
+
 pub fn json_to_value<T: serde::Serialize>(
     data: Option<T>,
 ) -> Result<Option<serde_json::Value>, serde_json::Error> {

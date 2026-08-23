@@ -39,7 +39,7 @@ pub async fn create_workflow_task(
         .create_workflow_task(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
     Ok((
-        web::Json(WorkflowTaskResponse::from_workflow_task_row(task)),
+        web::Json(WorkflowTaskResponse::from(task)),
         StatusCode::CREATED,
     ))
 }
@@ -72,9 +72,7 @@ pub async fn get_workflow_task(
     let task = service
         .get_workflow_task(&mut db, &user.id, &workflow_id, &workflow_task_id)
         .await?;
-    Ok(web::Json(WorkflowTaskResponse::from_workflow_task_row(
-        task,
-    )))
+    Ok(web::Json(WorkflowTaskResponse::from(task)))
 }
 
 #[utoipa::path(
@@ -115,9 +113,7 @@ pub async fn edit_workflow_task(
             body.into_inner(),
         )
         .await?;
-    Ok(web::Json(WorkflowTaskResponse::from_workflow_task_row(
-        task,
-    )))
+    Ok(web::Json(WorkflowTaskResponse::from(task)))
 }
 
 #[utoipa::path(

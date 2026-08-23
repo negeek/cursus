@@ -1,6 +1,6 @@
 use crate::dtos::RequestValidateTrait;
 use crate::dtos::error::ValidationError;
-use crate::models::WorkflowTaskEdge as WorkflowTaskEdgeRow;
+use crate::models::WorkflowTaskEdge;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -28,8 +28,8 @@ pub struct WorkflowTaskEdgeResponse {
     pub to_task_id: String,
 }
 
-impl WorkflowTaskEdgeResponse {
-    pub fn from_workflow_task_edge_row(edge: WorkflowTaskEdgeRow) -> Self {
+impl From<WorkflowTaskEdge> for WorkflowTaskEdgeResponse {
+    fn from(edge: WorkflowTaskEdge) -> Self {
         WorkflowTaskEdgeResponse {
             id: edge.id.to_string(),
             from_task_id: edge.from_task_id.to_string(),

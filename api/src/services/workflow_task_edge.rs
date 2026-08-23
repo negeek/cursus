@@ -8,6 +8,7 @@ use crate::repositories::workflow_task::WorkflowTaskRepository;
 use crate::repositories::workflow_task_edge::{
     CreateWorkflowTaskEdgeParams, UpdateWorkflowTaskEdgeParams, WorkflowTaskEdgeRepository,
 };
+use crate::util::type_conv::parse_uuid;
 
 pub struct WorkflowTaskEdgeService {
     workflows: WorkflowRepository,
@@ -60,8 +61,10 @@ impl WorkflowTaskEdgeService {
         workflow_id: Uuid,
         request: &WorkflowTaskEdgeRequest,
     ) -> Result<(WorkflowTask, WorkflowTask), Error> {
-        let from_task_id = parse_id(&request.from_task_id)?;
-        let to_task_id = parse_id(&request.to_task_id)?;
+        let from_task_id = parse_uuid(&request.from_task_id)
+            .map_err(|_| Error::InvalidId(request.from_task_id.clone()))?;
+        let to_task_id = parse_uuid(&request.to_task_id)
+            .map_err(|_| Error::InvalidId(request.to_task_id.clone()))?;
 
         if from_task_id == to_task_id {
             return Err(Error::SelfLoop);
@@ -91,7 +94,8 @@ impl WorkflowTaskEdgeService {
         workflow_id: &str,
         request: WorkflowTaskEdgeRequest,
     ) -> Result<WorkflowTaskEdge, Error> {
-        let workflow_id = parse_id(workflow_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
 
         let (from_task, to_task) = self.resolve_endpoints(db, workflow_id, &request).await?;
@@ -127,8 +131,9 @@ impl WorkflowTaskEdgeService {
         edge_id: &str,
         request: WorkflowTaskEdgeRequest,
     ) -> Result<WorkflowTaskEdge, Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let edge_id = parse_id(edge_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let edge_id = parse_uuid(edge_id).map_err(|_| Error::InvalidId(edge_id.to_string()))?;
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
 
         let mut edge = self
@@ -173,8 +178,9 @@ impl WorkflowTaskEdgeService {
         workflow_id: &str,
         edge_id: &str,
     ) -> Result<(), Error> {
-        let workflow_id = parse_id(workflow_id)?;
-        let edge_id = parse_id(edge_id)?;
+        let workflow_id =
+            parse_uuid(workflow_id).map_err(|_| Error::InvalidId(workflow_id.to_string()))?;
+        let edge_id = parse_uuid(edge_id).map_err(|_| Error::InvalidId(edge_id.to_string()))?;
         self.assert_owns_workflow(db, user_id, workflow_id).await?;
 
         self.edges
@@ -186,8 +192,4 @@ impl WorkflowTaskEdgeService {
         self.edges.delete(db, edge_id).await?;
         Ok(())
     }
-}
-
-fn parse_id(value: &str) -> Result<Uuid, Error> {
-    Uuid::parse_str(value).map_err(|_| Error::InvalidId(value.to_string()))
 }

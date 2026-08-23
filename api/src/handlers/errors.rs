@@ -40,98 +40,98 @@ fn internal_error(error: &dyn std::fmt::Display) -> HttpResponse {
 
 impl ResponseError for TaskServiceError {
     fn error_response(&self) -> HttpResponse {
-        use TaskServiceError::*;
         match self {
-            TaskNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
-            NotTaskOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
-            InvalidTaskId(_) | InvalidUserId(_) | InvalidJsonField { .. } => {
+            Self::TaskNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
+            Self::NotTaskOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
+            Self::InvalidTaskId(_) | Self::InvalidUserId(_) | Self::InvalidJsonField { .. } => {
                 client_error(StatusCode::BAD_REQUEST, self.to_string())
             }
-            Database(e) => internal_error(e),
+            Self::Database(e) => internal_error(e),
         }
     }
 }
 
 impl ResponseError for UserServiceError {
     fn error_response(&self) -> HttpResponse {
-        use UserServiceError::*;
         match self {
-            EmailAlreadyExists => client_error(StatusCode::CONFLICT, self.to_string()),
+            Self::EmailAlreadyExists => client_error(StatusCode::CONFLICT, self.to_string()),
 
             // Everything an unauthenticated caller can trigger by guessing
             // answers with 401 and the same shape, so nothing here helps
             // distinguish a real account from a fake one.
-            InvalidCredentials
-            | InvalidVerificationCode
-            | VerificationCodeExpired
-            | MalformedToken
-            | RejectedToken => client_error(StatusCode::UNAUTHORIZED, self.to_string()),
+            Self::InvalidCredentials
+            | Self::InvalidVerificationCode
+            | Self::VerificationCodeExpired
+            | Self::MalformedToken
+            | Self::RejectedToken => client_error(StatusCode::UNAUTHORIZED, self.to_string()),
 
-            EmailNotVerified => client_error(StatusCode::FORBIDDEN, self.to_string()),
-            UserNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
-            InvalidUserId(_) => client_error(StatusCode::BAD_REQUEST, self.to_string()),
+            Self::EmailNotVerified => client_error(StatusCode::FORBIDDEN, self.to_string()),
+            Self::UserNotFound => client_error(StatusCode::NOT_FOUND, self.to_string()),
+            Self::InvalidUserId(_) => client_error(StatusCode::BAD_REQUEST, self.to_string()),
 
             // Nothing the caller did wrong, and nothing they can act on.
-            HashingFailed | TokenIssuanceFailed | MissingConfiguration(_) => internal_error(self),
-            Database(e) => internal_error(e),
+            Self::HashingFailed | Self::TokenIssuanceFailed | Self::MissingConfiguration(_) => {
+                internal_error(self)
+            }
+            Self::Database(e) => internal_error(e),
         }
     }
 }
 
 impl ResponseError for WorkflowServiceError {
     fn error_response(&self) -> HttpResponse {
-        use WorkflowServiceError::*;
         match self {
-            WorkflowNotFound | TaskNotFound => {
+            Self::WorkflowNotFound | Self::TaskNotFound => {
                 client_error(StatusCode::NOT_FOUND, self.to_string())
             }
-            NotWorkflowOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
-            InvalidWorkflowId(_)
-            | InvalidUserId(_)
-            | UnsupportedRunType(_)
-            | InvalidCronExpression(_)
-            | MissingScheduleField { .. }
-            | InvalidScheduleTime => client_error(StatusCode::BAD_REQUEST, self.to_string()),
-            Database(e) => internal_error(e),
+            Self::NotWorkflowOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
+            Self::InvalidWorkflowId(_)
+            | Self::InvalidUserId(_)
+            | Self::UnsupportedRunType(_)
+            | Self::InvalidCronExpression(_)
+            | Self::MissingScheduleField { .. }
+            | Self::InvalidScheduleTime => client_error(StatusCode::BAD_REQUEST, self.to_string()),
+            Self::Database(e) => internal_error(e),
         }
     }
 }
 
 impl ResponseError for WorkflowTaskServiceError {
     fn error_response(&self) -> HttpResponse {
-        use WorkflowTaskServiceError::*;
         match self {
-            WorkflowTaskNotFound | WorkflowNotFound | TaskNotFound => {
+            Self::WorkflowTaskNotFound | Self::WorkflowNotFound | Self::TaskNotFound => {
                 client_error(StatusCode::NOT_FOUND, self.to_string())
             }
-            NotWorkflowOwner | NotTaskOwner => {
+            Self::NotWorkflowOwner | Self::NotTaskOwner => {
                 client_error(StatusCode::FORBIDDEN, self.to_string())
             }
-            DuplicateStepName(_) => client_error(StatusCode::CONFLICT, self.to_string()),
-            InvalidId(_) | InvalidJsonField { .. } | NegativeRetryConfiguration => {
+            Self::DuplicateStepName(_) => client_error(StatusCode::CONFLICT, self.to_string()),
+            Self::InvalidId(_)
+            | Self::InvalidJsonField { .. }
+            | Self::NegativeRetryConfiguration => {
                 client_error(StatusCode::BAD_REQUEST, self.to_string())
             }
-            Database(e) => internal_error(e),
+            Self::Database(e) => internal_error(e),
         }
     }
 }
 
 impl ResponseError for WorkflowTaskEdgeServiceError {
     fn error_response(&self) -> HttpResponse {
-        use WorkflowTaskEdgeServiceError::*;
         match self {
-            EdgeNotFound | WorkflowNotFound | WorkflowTaskNotFound => {
+            Self::EdgeNotFound | Self::WorkflowNotFound | Self::WorkflowTaskNotFound => {
                 client_error(StatusCode::NOT_FOUND, self.to_string())
             }
-            NotWorkflowOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
-            DuplicateEdge => client_error(StatusCode::CONFLICT, self.to_string()),
+            Self::NotWorkflowOwner => client_error(StatusCode::FORBIDDEN, self.to_string()),
+            Self::DuplicateEdge => client_error(StatusCode::CONFLICT, self.to_string()),
 
             // A malformed graph is something the caller described wrongly, and
             // the message says exactly which rule was broken so they can fix it.
-            StepOutsideWorkflow | SelfLoop | CycleDetected | InvalidId(_) => {
-                client_error(StatusCode::BAD_REQUEST, self.to_string())
-            }
-            Database(e) => internal_error(e),
+            Self::StepOutsideWorkflow
+            | Self::SelfLoop
+            | Self::CycleDetected
+            | Self::InvalidId(_) => client_error(StatusCode::BAD_REQUEST, self.to_string()),
+            Self::Database(e) => internal_error(e),
         }
     }
 }

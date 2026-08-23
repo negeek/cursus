@@ -26,10 +26,8 @@ pub async fn get_workflows(
     let mut db = state.db.clone();
     let workflow_service = WorkflowService::new();
     let workflows = workflow_service.list_workflows(&mut db, &user.id).await?;
-    let response: Vec<WorkflowResponse> = workflows
-        .into_iter()
-        .map(WorkflowResponse::from_workflow_row)
-        .collect();
+    let response: Vec<WorkflowResponse> =
+        workflows.into_iter().map(WorkflowResponse::from).collect();
     Ok(web::Json(response))
 }
 
@@ -58,7 +56,7 @@ pub async fn create_workflow(
         .create_workflow(&mut db, &user.id, body.into_inner())
         .await?;
     Ok((
-        web::Json(WorkflowResponse::from_workflow_row(workflow)),
+        web::Json(WorkflowResponse::from(workflow)),
         StatusCode::CREATED,
     ))
 }
@@ -88,7 +86,7 @@ pub async fn get_workflow(
     let workflow = workflow_service
         .get_workflow_by_id(&mut db, &user.id, &workflow_id)
         .await?;
-    Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
+    Ok(web::Json(WorkflowResponse::from(workflow)))
 }
 
 #[utoipa::path(
@@ -148,7 +146,7 @@ pub async fn edit_workflow(
     let workflow = workflow_service
         .edit_workflow(&mut db, &user.id, &workflow_id, body.into_inner())
         .await?;
-    Ok(web::Json(WorkflowResponse::from_workflow_row(workflow)))
+    Ok(web::Json(WorkflowResponse::from(workflow)))
 }
 
 #[utoipa::path(

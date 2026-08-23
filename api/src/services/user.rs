@@ -10,6 +10,7 @@ use crate::repositories::token::{BlacklistTokenRepository, CreateBlacklistedToke
 use crate::repositories::user::{CreateUserParams, UserRepository};
 use crate::repositories::user_verify::{CreateUserVerifyParams, UserVerifyRepository};
 use crate::util::token::{TokenCodec, TokenType};
+use crate::util::type_conv::timestamp_to_datetime;
 use crate::util::{gen_, token};
 
 /// How long a sign in code stays usable.
@@ -223,16 +224,4 @@ impl UserService {
             .generate_token(TokenType::Access)
             .map_err(|_| UserServiceError::TokenIssuanceFailed)
     }
-}
-
-/// Converts a JWT expiry claim into the shape the timestamp columns use.
-///
-/// Falls back to the current time if the claim is out of range, which records
-/// the entry as already expired. That is the safe direction to fail: a
-/// blacklist row that looks expired gets cleaned up early, whereas silently
-/// dropping the row would leave a revoked token working.
-fn timestamp_to_datetime(seconds: usize) -> jiff::civil::DateTime {
-    jiff::Timestamp::from_second(seconds as i64)
-        .map(|ts| ts.to_zoned(jiff::tz::TimeZone::UTC).datetime())
-        .unwrap_or_else(|_| now())
 }

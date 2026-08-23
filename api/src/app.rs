@@ -50,7 +50,7 @@ impl Default for ApplicationConfiguration {
             database_url: String::new(),
             host: "0.0.0.0".to_string(),
             port: 8080,
-            workers: 4,
+            workers: 2,
             log_level: "info".to_string(),
         }
     }
